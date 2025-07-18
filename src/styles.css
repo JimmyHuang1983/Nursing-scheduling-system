@@ -1,0 +1,26 @@
+.schedule-table select {
+  width: 50px;
+}
+
+.schedule-table .summary-cell {
+  background-color: pink;
+}
+
+.schedule-table .error-cell {
+  background-color: red;
+  color: white;
+}
+
+.error-report {
+  color: red;
+  margin-top: 10px;
+}
+
+.input-panel {
+  margin-bottom: 20px;
+}
+
+.input-panel textarea {
+  width: 100%;
+  font-size: 1em;
+}

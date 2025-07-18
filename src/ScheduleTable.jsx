@@ -1,76 +1,63 @@
 import React from 'react';
+import './styles.css';
 
-const shiftOptions = ['D', 'E', 'N', 'OFF', 'R', '公'];
+const shifts = ['D', 'E', 'N', 'OFF', '公', 'R'];
 
-function ScheduleTable({ schedule, daysInMonth, onScheduleChange, nurses }) {
-  const shiftGroups = [
-    { name: '日班', code: 'D' },
-    { name: '小夜班', code: 'E' },
-    { name: '大夜班', code: 'N' },
-  ];
+function ScheduleTable({ schedule, setSchedule }) {
+  const nurses = Object.keys(schedule);
+  const days = [...Array(31).keys()];
 
-  const getTotalShiftsPerDay = (dayIndex, shiftCode) => {
-    return nurses.reduce((count, nurse) => {
-      const shift = schedule[nurse]?.[dayIndex];
-      return shift === shiftCode ? count + 1 : count;
-    }, 0);
+  const handleChange = (nurse, day, value) => {
+    const newSchedule = { ...schedule };
+    newSchedule[nurse][day] = value;
+    setSchedule(newSchedule);
   };
 
-  const getOffDaysForNurse = (nurse) => {
-    return schedule[nurse]?.filter(s => s === 'OFF').length || 0;
-  };
+  const shiftCountPerDay = days.map(day =>
+    nurses.reduce((acc, nurse) => {
+      const val = schedule[nurse][day];
+      if (['D', 'E', 'N'].includes(val)) acc[val] = (acc[val] || 0) + 1;
+      return acc;
+    }, {})
+  );
 
   return (
-    <table border="1">
+    <table className="schedule-table">
       <thead>
-        <tr>
-          <th>姓名</th>
-          {Array.from({ length: daysInMonth }, (_, i) => (
-            <th key={i}>{i + 1}</th>
-          ))}
-          <th>本月休假天數</th>
-        </tr>
+        <tr><th>姓名</th>{days.map(d => <th key={d}>{d + 1}</th>)}<th>休假數</th></tr>
       </thead>
       <tbody>
-        {shiftGroups.map((group, groupIdx) => (
-          <React.Fragment key={group.code}>
-            {/* 加總列 */}
-            <tr style={{ backgroundColor: '#eee', fontWeight: 'bold' }}>
-              <td>{group.name}總人數</td>
-              {Array.from({ length: daysInMonth }, (_, i) => (
-                <td key={i}>{getTotalShiftsPerDay(i, group.code)}</td>
+        {nurses.map(nurse => {
+          const offCount = schedule[nurse].filter(s => s === 'OFF').length;
+          return (
+            <tr key={nurse}>
+              <td>{nurse}</td>
+              {schedule[nurse].map((val, day) => (
+                <td key={day}>
+                  <select value={val} onChange={e => handleChange(nurse, day, e.target.value)}>
+                    {shifts.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                </td>
               ))}
-              <td>-</td>
+              <td className="summary-cell">{offCount}</td>
             </tr>
-            {/* 空白列 */}
-            <tr><td colSpan={daysInMonth + 2}>&nbsp;</td></tr>
-
-            {/* 該班別人員列 */}
-            {nurses.map((nurse, i) => (
-              <tr key={`${group.code}-${i}`}>
-                <td>{nurse}</td>
-                {Array.from({ length: daysInMonth }, (_, dayIdx) => (
-                  <td key={dayIdx}>
-                    <select
-                      value={schedule[nurse]?.[dayIdx] || ''}
-                      onChange={(e) => onScheduleChange(nurse, dayIdx, e.target.value)}
-                    >
-                      <option value=""></option>
-                      {shiftOptions.map(opt => (
-                        <option key={opt} value={opt}>{opt}</option>
-                      ))}
-                    </select>
-                  </td>
-                ))}
-                <td>{getOffDaysForNurse(nurse)}</td>
-              </tr>
-            ))}
-          </React.Fragment>
-        ))}
+          );
+        })}
+        <tr className="summary-row">
+          <td>加總</td>
+          {days.map((_, day) => {
+            const counts = shiftCountPerDay[day];
+            return (
+              <td key={day} className={Object.values(counts).some(c => c < 1) ? 'error-cell' : 'summary-cell'}>
+                D:{counts.D || 0} E:{counts.E || 0} N:{counts.N || 0}
+              </td>
+            );
+          })}
+          <td></td>
+        </tr>
       </tbody>
     </table>
   );
 }
 
 export default ScheduleTable;
-
