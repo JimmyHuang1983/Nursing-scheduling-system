@@ -1,41 +1,45 @@
-import React, { useState } from 'react';
+import React from 'react';
 
-function InputPanel({ onConfirm }) {
-  const [input, setInput] = useState('');
-  const [availability, setAvailability] = useState({ D: [], E: [], N: [] });
+function InputPanel({ nurseNames, setNurseNames, availableShifts, setAvailableShifts, onConfirm }) {
+  const allNames = nurseNames.split(',').map(n => n.trim()).filter(Boolean);
 
-  const handleConfirm = () => {
-    const names = input.split('\n').map(n => n.trim()).filter(n => n);
-    onConfirm(names, availability);
+  const handleCheckboxChange = (shift, name) => {
+    const list = new Set(availableShifts[shift]);
+    list.has(name) ? list.delete(name) : list.add(name);
+    setAvailableShifts(prev => ({ ...prev, [shift]: Array.from(list) }));
   };
-
-  const toggle = (shift, name) => {
-    setAvailability(prev => {
-      const set = new Set(prev[shift]);
-      set.has(name) ? set.delete(name) : set.add(name);
-      return { ...prev, [shift]: Array.from(set) };
-    });
-  };
-
-  const names = input.split('\n').map(n => n.trim()).filter(n => n);
 
   return (
     <div className="input-panel">
-      <textarea value={input} onChange={e => setInput(e.target.value)} rows={5} placeholder="請輸入所有人員，一行一位" />
-      {['D', 'E', 'N'].map(shift => (
-        <div key={shift}>
-          <strong>{shift} 班</strong>
-          {names.map(name => (
-            <label key={name}>
-              <input type="checkbox" checked={availability[shift]?.includes(name)} onChange={() => toggle(shift, name)} />
-              {name}
-            </label>
-          ))}
-        </div>
-      ))}
-      <button onClick={handleConfirm}>確認</button>
+      <label>
+        輸入人員名單（用逗號分隔）：
+        <textarea
+          value={nurseNames}
+          onChange={e => setNurseNames(e.target.value)}
+          rows={3}
+        />
+      </label>
+      <div className="checkbox-groups">
+        {['D', 'E', 'N'].map(shift => (
+          <div key={shift}>
+            <strong>{shift} 班可上人員</strong>
+            {allNames.map(name => (
+              <label key={name}>
+                <input
+                  type="checkbox"
+                  checked={availableShifts[shift]?.includes(name)}
+                  onChange={() => handleCheckboxChange(shift, name)}
+                />
+                {name}
+              </label>
+            ))}
+          </div>
+        ))}
+      </div>
+      <button onClick={onConfirm}>確認人員與班別</button>
     </div>
   );
 }
 
 export default InputPanel;
+

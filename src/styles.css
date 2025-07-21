@@ -1,26 +1,22 @@
-.schedule-table select {
-  width: 50px;
+.app {
+  font-family: sans-serif;
+  padding: 20px;
 }
-
-.schedule-table .summary-cell {
-  background-color: pink;
+input, textarea, select {
+  margin: 5px;
 }
-
-.schedule-table .error-cell {
-  background-color: red;
-  color: white;
-}
-
-.error-report {
-  color: red;
-  margin-top: 10px;
-}
-
-.input-panel {
-  margin-bottom: 20px;
-}
-
-.input-panel textarea {
+.schedule-table {
+  border-collapse: collapse;
   width: 100%;
-  font-size: 1em;
+  margin-top: 20px;
 }
+.schedule-table th, .schedule-table td {
+  border: 1px solid #ccc;
+  padding: 4px;
+  text-align: center;
+}
+.sum-row {
+  background-color: pink;
+  font-weight: bold;
+}
+

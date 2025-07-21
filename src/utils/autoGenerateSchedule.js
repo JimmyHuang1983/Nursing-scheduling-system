@@ -1,62 +1,57 @@
 function autoGenerateSchedule(
-  nurses,
+  schedule,
+  availableShifts,
   daysInMonth,
-  preferredOffDays,
-  minOffDays,
-  maxConsecutiveDays,
   dayShiftCount,
   eveningShiftCount,
   nightShiftCount,
-  availability,
-  existingSchedule
+  minOffDays,
+  maxConsecutive
 ) {
-  const shifts = ['D', 'E', 'N', 'OFF', '公', 'R'];
-  const schedule = {};
-
-  // Initialize
-  nurses.forEach(name => {
-    schedule[name] = Array.from({ length: daysInMonth }, (_, i) =>
-      existingSchedule?.[name]?.[i] === 'R' ? 'R' : 'OFF'
-    );
-  });
-
-  const dailyShiftAssignments = Array.from({ length: daysInMonth }, () => ({ D: [], E: [], N: [] }));
+  const nurses = Object.keys(schedule);
+  const newSchedule = JSON.parse(JSON.stringify(schedule));
 
   for (let day = 0; day < daysInMonth; day++) {
-    const shuffled = [...nurses].sort(() => 0.5 - Math.random());
-
-    const assignForShift = (shiftKey, count) => {
+    const assign = (shiftKey, count) => {
+      const candidates = nurses.filter(
+        name =>
+          availableShifts[shiftKey].includes(name) &&
+          newSchedule[name][day] !== 'R'
+      );
       let assigned = 0;
-      for (const nurse of shuffled) {
-        const recent = schedule[nurse].slice(Math.max(0, day - maxConsecutiveDays), day);
-        const tooMany = recent.filter(s => ['D', 'E', 'N'].includes(s)).length >= maxConsecutiveDays;
-        if (schedule[nurse][day] === 'OFF' && !tooMany && availability[shiftKey]?.includes(nurse)) {
-          schedule[nurse][day] = shiftKey;
-          dailyShiftAssignments[day][shiftKey].push(nurse);
+
+      for (const name of candidates) {
+        if (assigned >= count) break;
+        const recent = newSchedule[name].slice(Math.max(0, day - maxConsecutive), day);
+        const tooMany = recent.every(s => ['D', 'E', 'N'].includes(s));
+        if (!tooMany && !['D', 'E', 'N'].includes(newSchedule[name][day])) {
+          newSchedule[name][day] = shiftKey;
           assigned++;
-          if (assigned >= count) break;
         }
+      }
+
+      if (assigned < count) {
+        newSchedule[`__warning__${shiftKey}_${day}`] = `⚠️ ${day + 1} 日 ${shiftKey} 班僅排到 ${assigned} 人`;
       }
     };
 
-    assignForShift('D', dayShiftCount);
-    assignForShift('E', eveningShiftCount);
-    assignForShift('N', nightShiftCount);
+    assign('D', dayShiftCount);
+    assign('E', eveningShiftCount);
+    assign('N', nightShiftCount);
   }
 
-  // Fill OFF for unmet minOff
-  nurses.forEach(nurse => {
-    const current = schedule[nurse].filter(s => s === 'OFF').length;
-    const deficit = minOffDays - current;
-    if (deficit > 0) {
-      const replaceable = schedule[nurse].map((s, i) => (['D', 'E', 'N'].includes(s) ? i : -1)).filter(i => i >= 0);
-      for (let i = 0; i < deficit && i < replaceable.length; i++) {
-        schedule[nurse][replaceable[i]] = 'OFF';
+  // 補休
+  nurses.forEach(name => {
+    const restDays = newSchedule[name].filter(s => s === 'OFF').length;
+    for (let i = 0; i < daysInMonth && restDays < minOffDays; i++) {
+      if (!['D', 'E', 'N', 'R'].includes(newSchedule[name][i])) {
+        newSchedule[name][i] = 'OFF';
       }
     }
   });
 
-  return schedule;
+  return newSchedule;
 }
 
 export default autoGenerateSchedule;
+
