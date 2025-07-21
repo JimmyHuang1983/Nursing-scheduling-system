@@ -20,7 +20,7 @@ function App() {
   });
 
   const handleConfirm = () => {
-    const names = nurseNames.split(',').map(name => name.trim()).filter(Boolean);
+    const names = (nurseNames || '').split(',').map(name => name.trim()).filter(Boolean);
     const initialSchedule = {};
     names.forEach(name => {
       initialSchedule[name] = Array(daysInMonth).fill('');
