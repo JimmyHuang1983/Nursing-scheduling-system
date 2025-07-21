@@ -1,0 +1,48 @@
+# deploy.yml
+name: Deploy React App to GitHub Pages
+
+on:
+  push:
+    branches: [ "main" ] # 當推送到 main 分支時觸發
+  workflow_dispatch:
+
+# 設定工作流程的權限，這是必要步驟
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20' # 建議使用 LTS 版本
+          cache: 'npm'
+      - name: Install dependencies
+        run: npm install
+      - name: Build
+        run: npm run build # 這會產生 dist 資料夾
+
+      # 將建置好的 dist 資料夾打包成 Pages Artifact
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './dist' # 指向您的建置輸出資料夾
+
+  deploy:
+    # 需要在 build 工作完成後才執行
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      # 部署到 GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
