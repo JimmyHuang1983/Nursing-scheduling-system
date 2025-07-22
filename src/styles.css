@@ -1,22 +1,64 @@
-.App{
+.App {
   font-family: sans-serif;
   padding: 20px;
 }
-input, textarea, select {
+
+input,
+textarea,
+select {
   margin: 5px;
 }
+
 .schedule-table {
   border-collapse: collapse;
   width: 100%;
   margin-top: 20px;
+  /* 讓表格佈局固定，欄寬設定才會生效 */
+  table-layout: fixed;
 }
-.schedule-table th, .schedule-table td {
+
+.schedule-table th,
+.schedule-table td {
   border: 1px solid #ccc;
   padding: 4px;
   text-align: center;
+  /* 避免文字過長換行 */
+  white-space: nowrap;
 }
-.sum-row {
-  background-color: pink;
+
+/* 針對第一欄（姓名欄）設定樣式 */
+.schedule-table th:first-child,
+.schedule-table td:first-child {
+  min-width: 100px; /* 加寬姓名欄 */
   font-weight: bold;
+  /* 如果姓名太長，讓它固定在左側 */
+  position: sticky;
+  left: 0;
+  background-color: #f2f2f2; /* 增加背景色區別 */
+}
+
+/* 讓下拉選單填滿格子並移除邊框，看起來更整潔 */
+.schedule-table select {
+    width: 100%;
+    border: none;
+    background: transparent;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    text-align: center;
+    cursor: pointer;
+}
+
+.sum-row {
+  background-color: #e3f2fd; /* 淡藍色背景 */
+  font-weight: bold;
+  color: #0d47a1;
+}
+
+/* 新增：間隔行的樣式 */
+.spacer-row td {
+  border: none;
+  height: 1rem; /* 增加一點高度作為間隔 */
+  padding: 0;
 }
 

@@ -107,6 +107,7 @@ function App() {
             schedule={schedule}
             setSchedule={setSchedule}
             daysInMonth={daysInMonth}
+            availableShifts={availableShifts}
           />
           <button onClick={handleGenerate}>產生班表</button>
         </>
