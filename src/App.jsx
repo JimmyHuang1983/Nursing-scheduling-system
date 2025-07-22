@@ -44,7 +44,6 @@ function App() {
     setSchedule(newSchedule);
   };
 
-  // ✅ 新增: 匯出至 Excel 的處理函式
   const handleExportToExcel = () => {
     if (typeof XLSX === 'undefined') {
       alert('Excel匯出功能正在載入，請稍後再試。');
@@ -55,7 +54,6 @@ function App() {
     const shifts = ['D', 'E', 'N'];
     const nurseList = Object.keys(schedule);
 
-    // 建立表頭
     const header = ['護理師'];
     for (let i = 1; i <= daysInMonth; i++) {
       header.push(i.toString());
@@ -63,11 +61,9 @@ function App() {
     header.push('休假');
     dataForExcel.push(header);
 
-    // 依班別分組，建立資料
     shifts.forEach(shift => {
       const shiftNurses = nurseList.filter(nurse => availableShifts[shift]?.includes(nurse));
 
-      // 該班別的護理師班表
       shiftNurses.forEach(nurse => {
         const rowData = [nurse];
         const nurseShifts = schedule[nurse];
@@ -77,7 +73,6 @@ function App() {
         dataForExcel.push(rowData);
       });
 
-      // 該班別的每日總計
       const totalRow = [`${shift} 班總計`];
       for (let day = 0; day < daysInMonth; day++) {
         let dailyTotal = 0;
@@ -88,16 +83,14 @@ function App() {
         });
         totalRow.push(dailyTotal);
       }
-      totalRow.push(''); // "休假"欄為空
+      totalRow.push('');
       dataForExcel.push(totalRow);
 
-      // 新增空白間隔行
       if (shifts.indexOf(shift) < shifts.length - 1) {
         dataForExcel.push(Array(daysInMonth + 2).fill(''));
       }
     });
 
-    // 建立工作表並觸發下載
     const ws = XLSX.utils.aoa_to_sheet(dataForExcel);
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "班表");
@@ -142,9 +135,9 @@ function App() {
             setSchedule={setSchedule}
             daysInMonth={daysInMonth}
             availableShifts={availableShifts}
+            params={params} // ✅ 新增：將 params 傳遞給 ScheduleTable
           />
           <button onClick={handleGenerate}>產生班表</button>
-          {/* ✅ 新增: 匯出Excel按鈕 */}
           <button onClick={handleExportToExcel} style={{ marginLeft: '10px' }}>匯出至Excel</button>
         </>
       )}
@@ -153,4 +146,5 @@ function App() {
 }
 
 export default App;
+
 

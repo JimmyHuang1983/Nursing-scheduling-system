@@ -16,59 +16,62 @@ select {
   table-layout: fixed;
 }
 
-/* 修正：明確定義所有儲存格的預設顏色，避免瀏覽器深色模式等問題 */
 .schedule-table th,
 .schedule-table td {
   border: 1px solid #ccc;
   padding: 4px;
   text-align: center;
   white-space: nowrap;
-  background-color: #ffffff; /* 所有儲存格預設為白底 */
-  color: #000000;          /* 所有文字預設為黑字 */
+  background-color: #ffffff;
+  color: #000000;
 }
 
-/* 新增：表頭樣式，增加區別度 */
 .schedule-table th {
-    background-color: #f8f9fa; /* 淡灰色表頭 */
+    background-color: #f8f9fa;
     font-weight: bold;
 }
 
-/* 修正：針對第一欄（姓名欄）設定清晰的樣式 */
 .schedule-table th:first-child,
 .schedule-table td:first-child {
   min-width: 100px;
   font-weight: bold;
   position: sticky;
   left: 0;
-  background-color: #f2f2f2; /* 淡灰色固定欄 */
-  color: #000000;           /* 確保姓名為黑色字 */
+  background-color: #f2f2f2;
+  color: #000000;
 }
 
-/* 修正：讓下拉選單在任何背景下都清晰可見 */
 .schedule-table select {
     width: 100%;
     border: none;
-    background: transparent; /* 繼承儲存格的白色背景 */
-    color: #000000;          /* 確保下拉選單文字為黑色 */
+    background: transparent;
+    color: #000000;
     -webkit-appearance: none;
     -moz-appearance: none;
     appearance: none;
     text-align: center;
     cursor: pointer;
-    font-size: 1em; /* 確保字體大小正常 */
+    font-size: 1em;
 }
 
 .sum-row {
-  background-color: #e3f2fd; /* 淡藍色背景 */
+  background-color: #e3f2fd;
   font-weight: bold;
   color: #0d47a1;
 }
 
-/* 修正：間隔行的樣式 */
 .spacer-row td {
   border: none;
-  height: 1rem; /* 增加一點高度作為間隔 */
+  height: 1rem;
   padding: 0;
-  background-color: transparent; /* 間隔行應該是透明的 */
+  background-color: transparent;
 }
+
+/* ✅ 新增: 人數或休假不足時的警示樣式 */
+.shortage-cell {
+  background-color: #ffcdd2 !important; /* 淡紅色背景 */
+  color: #b71c1c !important;          /* 深紅色文字 */
+  font-weight: bold;
+}
+
 
