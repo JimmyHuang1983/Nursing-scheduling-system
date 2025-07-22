@@ -39,7 +39,8 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts }) 
       <tbody key={shift}>
         {/* 渲染此班別下每一位護理師的班表行 */}
         {shiftNurses.map(nurse => {
-          const offDays = schedule[nurse].filter(s => s === 'OFF').length;
+          // ✅ 修正：將 'R' 也算入休假天數
+          const offDays = schedule[nurse].filter(s => s === 'OFF' || s === 'R').length;
           return (
             <tr key={nurse}>
               <td>{nurse}</td>
@@ -58,7 +59,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts }) 
         })}
         {/* 渲染此班別的人數加總行 */}
         <tr className="sum-row">
-          <td>{shift} 班本日總計</td>
+          <td>{shift} 班總計</td>
           {dailyShiftSum.map((sum, i) => (
             <td key={`sum-${shift}-${i}`}>{sum}</td>
           ))}
@@ -80,7 +81,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts }) 
           {Array.from({ length: daysInMonth }, (_, i) => (
             <th key={i + 1}>{i + 1}</th>
           ))}
-          <th>本月休假</th>
+          <th>休假</th>
         </tr>
       </thead>
       {/* 依次渲染 D, E, N 三個班別的區塊 */}
@@ -90,4 +91,5 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts }) 
 }
 
 export default ScheduleTable;
+
 
