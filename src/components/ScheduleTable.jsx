@@ -79,24 +79,14 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
   };
 
   // 渲染一個班別的每日總計行
-    const renderTotalRow = (shift) => {
-        let dailyTotals;
-        // D班總計只統計D班人員所上的D班
-        if (shift === 'D') {
-            dailyTotals = Array.from({ length: daysInMonth }, (_, day) => {
-                // D班人員當天被排為D班的總數
-                const dShiftCount = dNurses.filter(nurse => schedule[nurse] && schedule[nurse][day] === 'D').length;
-                // Fn班人員當天被排為D班的總數
-                const fnOnDShiftCount = fnNurses.filter(nurse => schedule[nurse] && schedule[nurse][day] === 'D').length;
-                return dShiftCount + fnOnDShiftCount;
-            });
-        } else { // 其他班別的總計
-            dailyTotals = Array.from({ length: daysInMonth }, (_, day) => {
-                return nurseList.reduce((count, nurse) => {
-                    return schedule[nurse] && schedule[nurse][day] === shift ? count + 1 : count;
-                }, 0);
-            });
-        }
+  const renderTotalRow = (shift) => {
+    // ✅ 簡化並修正後的統一計算邏輯
+    const dailyTotals = Array.from({ length: daysInMonth }, (_, day) => {
+      return nurseList.reduce((count, nurse) => {
+        // 如果該護理師當天的班別與我們要計算的班別相符，則計數+1
+        return schedule[nurse] && schedule[nurse][day] === shift ? count + 1 : count;
+      }, 0);
+    });
 
     const required = params[shift] || 0;
     
