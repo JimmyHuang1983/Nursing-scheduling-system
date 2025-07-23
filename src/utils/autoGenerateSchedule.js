@@ -34,15 +34,14 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
     };
 
     let bestSchedule = JSON.parse(JSON.stringify(schedule));
-    let minShortage = Infinity;
+    let bestScore = Infinity; // 改為綜合分數
 
-    // 演算法會嘗試多次，以從隨機結果中找出人力短缺最少的最佳解
-    for (let attempt = 0; attempt < 10; attempt++) {
+    // 演算法會嘗試多次，以從隨機結果中找出最佳解
+    for (let attempt = 0; attempt < 20; attempt++) { // 增加嘗試次數以獲得更好結果
         const currentSchedule = JSON.parse(JSON.stringify(schedule));
-        // 每次都隨機打亂護理師順序，以產生多樣化的班表
         const shuffledNurses = [...nurses].sort(() => Math.random() - 0.5);
 
-        // 步驟 1: 清空現有班表 (但保留使用者預先設定的 'R' 假)
+        // 步驟 1: 清空現有班表 (但保留 'R' 假)
         shuffledNurses.forEach(nurse => {
             for (let day = 0; day < daysInMonth; day++) {
                 if (currentSchedule[nurse][day] !== 'R') {
@@ -51,11 +50,10 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
 
-        // 步驟 2: 依序填滿各班別，優先處理需求較死的班別 (Fn, N, E, D)
+        // 步驟 2: 依序填滿各班別
         const shiftsToFill = ['Fn', 'N', 'E', 'D'];
         shiftsToFill.forEach(shift => {
             for (let day = 0; day < daysInMonth; day++) {
-                // Fn 班只在週間排
                 if (shift === 'Fn' && !isWeekday(day)) continue;
 
                 const requiredCount = params[shift];
@@ -63,15 +61,12 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
                 while (currentCount < requiredCount) {
                     const shiftCounts = getShiftCounts(currentSchedule);
-                    // 找出候選人：尚未排班、有該班資格
                     const candidates = shuffledNurses
                         .filter(n => currentSchedule[n][day] === '' && availableShifts[shift]?.includes(n))
-                        // 排序：優先選擇「最需要上班(休假最少)」的人
                         .sort((a, b) => shiftCounts[a].off - shiftCounts[b].off);
 
                     let assigned = false;
                     for (const candidate of candidates) {
-                        // 檢查連續上班天數
                         let consecutive = 0;
                         for (let i = day - 1; i >= 0; i--) {
                             if (['D', 'E', 'N', 'Fn'].includes(currentSchedule[candidate][i])) {
@@ -84,20 +79,19 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                             currentSchedule[candidate][day] = shift;
                             currentCount++;
                             assigned = true;
-                            break; // 找到人就換下一輪
+                            break;
                         }
                     }
-                    if (!assigned) break; // 若無任何合適人選，則放棄這一天這個班的剩餘空缺
+                    if (!assigned) break;
                 }
             }
         });
         
-        // 步驟 3: Fn 班在滿足自身需求後，支援 D 班
+        // 步驟 3: Fn 班支援 D 班
         for (let day = 0; day < daysInMonth; day++) {
             let dCount = nurses.filter(n => currentSchedule[n][day] === 'D').length;
             if (dCount < dayShiftCount) {
                 const shiftCounts = getShiftCounts(currentSchedule);
-                // 找出候選人：有Fn和D雙重資格、尚未排班
                 const fnCandidates = shuffledNurses
                     .filter(n =>
                         currentSchedule[n][day] === '' &&
@@ -108,39 +102,33 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
                 for (const candidate of fnCandidates) {
                     if (dCount >= dayShiftCount) break;
-                     let consecutive = 0;
-                        for (let i = day - 1; i >= 0; i--) {
-                            if (['D', 'E', 'N', 'Fn'].includes(currentSchedule[candidate][i])) {
-                                consecutive++;
-                            } else {
-                                break;
-                            }
-                        }
+                    let consecutive = 0;
+                    for (let i = day - 1; i >= 0; i--) {
+                        if (['D', 'E', 'N', 'Fn'].includes(currentSchedule[candidate][i])) consecutive++;
+                        else break;
+                    }
                     if (consecutive < maxConsecutive) {
-                         currentSchedule[candidate][day] = 'D'; // 將Fn班人員排為D班
+                         currentSchedule[candidate][day] = 'D';
                          dCount++;
                     }
                 }
             }
         }
         
-        // 步驟 4: 夜班人力互相支援 (若有勾選)
+        // 步驟 4: 夜班人力互相支援
         if (mutualSupport) {
             for (let day = 0; day < daysInMonth; day++) {
                 let n_count = nurses.filter(n => currentSchedule[n][day] === 'N').length;
                 if (n_count < nightShiftCount) {
                      const shiftCounts = getShiftCounts(currentSchedule);
-                     // 找出候選人：有E班資格、當天是休假、總休假數>最低要求、隔天不是E班
                      const e_candidates = shuffledNurses.filter(n =>
                         availableShifts['E']?.includes(n) &&
                         currentSchedule[n][day] === 'OFF' && 
                         shiftCounts[n].off > minOff && 
                         (day + 1 >= daysInMonth || currentSchedule[n][day+1] !== 'E') 
                      );
-                     
                      if (e_candidates.length > 0) {
-                         const candidate = e_candidates[0]; // 選第一位符合資格者
-                         currentSchedule[candidate][day] = 'N'; // 將 'OFF' 改為 'N'
+                         currentSchedule[e_candidates[0]][day] = 'N';
                      }
                 }
             }
@@ -155,7 +143,8 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
 
-        // 評分機制：計算當前班表的人力短缺總數
+        // ✅ 新的評分機制
+        // 1. 計算人力短缺總數 (最高權重)
         let shortage = 0;
         for (let day = 0; day < daysInMonth; day++) {
             for (const shift of ['D', 'E', 'N', 'Fn']) {
@@ -168,9 +157,18 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         }
 
-        // 如果當前班表的短缺數更少，則更新為最佳解
-        if (shortage < minShortage) {
-            minShortage = shortage;
+        // 2. 計算休假天數的公平性 (變異數)
+        const finalShiftCounts = getShiftCounts(currentSchedule);
+        const offDaysArray = Object.values(finalShiftCounts).map(counts => counts.off);
+        const averageOffDays = offDaysArray.reduce((sum, val) => sum + val, 0) / (offDaysArray.length || 1);
+        const variance = offDaysArray.reduce((sum, val) => sum + Math.pow(val - averageOffDays, 2), 0) / (offDaysArray.length || 1);
+
+        // 3. 結合短缺與不公平性，計算總分
+        const currentScore = shortage * 1000 + variance;
+
+        // 如果當前分數更低，則更新為最佳解
+        if (currentScore < bestScore) {
+            bestScore = currentScore;
             bestSchedule = JSON.parse(JSON.stringify(currentSchedule));
         }
     }
@@ -179,5 +177,3 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 }
 
 export default autoGenerateSchedule;
-
-
