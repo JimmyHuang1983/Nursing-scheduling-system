@@ -85,10 +85,9 @@ button:hover {
 /* --- Table Styles --- */
 .schedule-table {
   border-collapse: collapse;
-  width: 100%;
+  /* 移除 width: 100%，讓表格可以自由延展 */
   margin-top: 20px;
   font-size: 14px;
-  /* 移除 table-layout: fixed; 讓欄位寬度能根據內容自動調整 */
 }
 
 .schedule-table th, .schedule-table td {
@@ -97,6 +96,7 @@ button:hover {
   text-align: center;
   background-color: #fff;
   color: #333;
+  min-width: 55px; /* 為所有儲存格設定一個最小寬度 */
 }
 
 .schedule-table th {
