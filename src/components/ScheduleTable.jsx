@@ -80,10 +80,8 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
 
   // 渲染一個班別的每日總計行
   const renderTotalRow = (shift) => {
-    // ✅ 簡化並修正後的統一計算邏輯
     const dailyTotals = Array.from({ length: daysInMonth }, (_, day) => {
       return nurseList.reduce((count, nurse) => {
-        // 如果該護理師當天的班別與我們要計算的班別相符，則計數+1
         return schedule[nurse] && schedule[nurse][day] === shift ? count + 1 : count;
       }, 0);
     });
@@ -94,7 +92,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
       <tr className="sum-row">
         <td>{shift} 班總計</td>
         {dailyTotals.map((total, i) => {
-          // 確保能從 params 拿到 year 和 month
           const year = params.year || new Date().getFullYear();
           const month = params.month !== undefined ? params.month : new Date().getMonth();
           const date = new Date(year, month, i + 1);
