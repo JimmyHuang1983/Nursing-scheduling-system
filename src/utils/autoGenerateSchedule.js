@@ -39,12 +39,12 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         return consecutive < maxConsecutive;
     };
 
-    // --- 演算法主體 ---
+    // --- 全新演算法主體 ---
     let bestSchedule = {};
-    let bestScore = { shortage: Infinity, variance: Infinity };
+    let bestScore = Infinity;
 
     // 演算法會嘗試多次，從隨機結果中找出最佳解
-    for (let attempt = 0; attempt < 50; attempt++) { // 增加嘗試次數以獲得更優解
+    for (let attempt = 0; attempt < 50; attempt++) { 
         const currentSchedule = JSON.parse(JSON.stringify(schedule));
         const shuffledNurses = [...nurses].sort(() => Math.random() - 0.5);
 
@@ -55,100 +55,83 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
 
-        // 步驟 2: **人力優先**，填滿每日各班別基礎人力
-        for (let day = 0; day < daysInMonth; day++) {
-            const shiftsInOrder = ['Fn', 'N', 'E', 'D'];
-            for (const shift of shiftsInOrder) {
-                if (shift === 'Fn' && !isWeekday(day)) continue;
+        // 步驟 2: **迭代填滿空格**，每次都選擇最優的選擇
+        // 這個迴圈會重複執行，直到所有空格都被填滿
+        let changedInLoop = true;
+        while(changedInLoop) {
+            changedInLoop = false;
+            let bestCell = { nurse: null, day: -1, shift: null, score: -Infinity };
 
-                const required = params[shift];
-                let assignedCount = nurses.filter(n => currentSchedule[n][day] === shift).length;
+            // 遍歷所有護理師和天數，找出最佳填補位置
+            for (const nurse of shuffledNurses) {
+                for (let day = 0; day < daysInMonth; day++) {
+                    if (currentSchedule[nurse][day] === '') {
+                        // 評估在此處填入各班別的「分數」
+                        for (const shift of ['D', 'E', 'N', 'Fn', 'OFF']) {
+                            if (!availableShifts[shift]?.includes(nurse) && shift !== 'OFF') continue;
+                            if (shift === 'Fn' && !isWeekday(day)) continue;
+                            if (!checkConsecutive(currentSchedule, nurse, day)) continue;
 
-                while (assignedCount < required) {
-                    const shiftCounts = getShiftCounts(currentSchedule);
+                            let currentScore = 0;
+                            const dailyAssigned = nurses.filter(n => currentSchedule[n][day] === shift).length;
+                            const required = params[shift] || 0;
 
-                    // 尋找最佳候選人：尚未排班、有資格、且最需要上班(休假天數最少)
-                    const candidates = shuffledNurses
-                        .filter(n => currentSchedule[n][day] === '' && availableShifts[shift]?.includes(n) && checkConsecutive(currentSchedule, n, day))
-                        .sort((a, b) => shiftCounts[a].off - shiftCounts[b].off);
+                            // 核心計分邏輯：
+                            // 1. 如果該班別人力不足，則優先填補 (高分)
+                            if (shift !== 'OFF' && dailyAssigned < required) {
+                                currentScore += 1000;
+                            }
 
-                    if (candidates.length > 0) {
-                        currentSchedule[candidates[0]][day] = shift;
-                        assignedCount++;
-                    } else {
-                        break; // 當前班別找不到人，換下一個班別
+                            // 2. 如果該員休假不足，則優先給假 (次高分)
+                            const shiftCounts = getShiftCounts(currentSchedule);
+                            if (shift === 'OFF' && shiftCounts[nurse].off < minOff) {
+                                currentScore += 500;
+                            }
+
+                            // 3. 避免讓人休太多假
+                            if (shift === 'OFF' && shiftCounts[nurse].off >= minOff) {
+                                currentScore -= 200; // 不鼓勵休超過的假
+                            }
+                            
+                            // 4. 隨機性，以產生多樣化結果
+                            currentScore += Math.random() * 50;
+
+                            if (currentScore > bestCell.score) {
+                                bestCell = { nurse, day, shift, score: currentScore };
+                            }
+                        }
                     }
                 }
+            }
+            
+            // 如果找到了最佳填補位置，就填入並重新開始下一輪迭代
+            if (bestCell.nurse) {
+                currentSchedule[bestCell.nurse][bestCell.day] = bestCell.shift;
+                changedInLoop = true;
             }
         }
         
-        // 步驟 3: **公平性調整**，優先把休假補滿
-        for (let i = 0; i < nurses.length; i++) {
-            const shiftCounts = getShiftCounts(currentSchedule);
-            // 找出最需要休假的人 (目前休假最少)
-            const nurseToRest = nurses.sort((a, b) => shiftCounts[a].off - shiftCounts[b].off)[0];
-            
-            let currentOffs = shiftCounts[nurseToRest].off;
-            if(currentOffs < minOff) {
-                for(let day = 0; day < daysInMonth; day++){
-                    if(currentSchedule[nurseToRest][day] === '' && currentOffs < minOff) {
-                        currentSchedule[nurseToRest][day] = 'OFF';
-                        currentOffs++;
-                    }
-                }
-            }
-        }
-
-        // 步驟 4: 執行支援邏輯，並填補剩餘空缺
-        for (let day = 0; day < daysInMonth; day++) {
-             // Fn 支援 D
-            let dCount = nurses.filter(n => currentSchedule[n][day] === 'D').length;
-            if (dCount < params.D) {
-                const fnCandidates = shuffledNurses.filter(n => currentSchedule[n][day] === '' && availableShifts['Fn']?.includes(n) && availableShifts['D']?.includes(n) && checkConsecutive(currentSchedule, n, day));
-                if(fnCandidates.length > 0) currentSchedule[fnCandidates[0]][day] = 'D';
-            }
-            // 夜班支援
-            if (mutualSupport) {
-                let nCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
-                if(nCount < params.N) {
-                    const shiftCounts = getShiftCounts(currentSchedule);
-                    const eCandidates = shuffledNurses.filter(n => availableShifts['E']?.includes(n) && currentSchedule[n][day] === '' && shiftCounts[n].off > minOff && checkConsecutive(currentSchedule, n, day));
-                     if(eCandidates.length > 0) currentSchedule[eCandidates[0]][day] = 'N';
-                }
-            }
-        }
-
-        // 步驟 5: 將最後所有剩餘的空格填滿 'OFF'
-        shuffledNurses.forEach(nurse => {
-            for (let day = 0; day < daysInMonth; day++) {
-                if (currentSchedule[nurse][day] === '') {
-                    currentSchedule[nurse][day] = 'OFF';
-                }
-            }
-        });
-
-        // --- 新的評分機制 ---
+        // 步驟 3: 最終檢查與評分
         let shortage = 0;
         for (let day = 0; day < daysInMonth; day++) {
             for (const shift of ['D', 'E', 'N', 'Fn']) {
                 if (shift === 'Fn' && !isWeekday(day)) continue;
                 const required = params[shift];
                 const actual = nurses.filter(n => currentSchedule[n][day] === shift).length;
-                if (actual < required) shortage += (required - actual) * 10;
+                if (actual < required) shortage += (required - actual);
             }
         }
-        
+
         const finalShiftCounts = getShiftCounts(currentSchedule);
         const offDaysArray = Object.values(finalShiftCounts).map(counts => counts.off);
         const averageOffDays = offDaysArray.reduce((sum, val) => sum + val, 0) / (offDaysArray.length || 1);
         const variance = offDaysArray.reduce((sum, val) => sum + Math.pow(val - averageOffDays, 2), 0) / (offDaysArray.length || 1);
-
-        const currentScore = { shortage, variance };
         
-        if (currentScore.shortage < bestScore.shortage || 
-           (currentScore.shortage === bestScore.shortage && currentScore.variance < bestScore.variance)) 
-        {
-            bestScore = currentScore;
+        // 總分結合了「人力短缺」和「休假不公」
+        const totalScore = shortage * 1000 + variance;
+        
+        if (totalScore < bestScore) {
+            bestScore = totalScore;
             bestSchedule = JSON.parse(JSON.stringify(currentSchedule));
         }
     }
