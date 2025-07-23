@@ -1,7 +1,6 @@
 import React from 'react';
 
 function InputPanel({ nurseNames, setNurseNames, availableShifts, setAvailableShifts, onConfirm }) {
-  // ✅ 在這裡加上 (nurseNames || '') 來防止錯誤
   const allNames = (nurseNames || '').split(',').map(n => n.trim()).filter(Boolean);
 
   const handleCheckboxChange = (shift, name) => {
@@ -15,13 +14,14 @@ function InputPanel({ nurseNames, setNurseNames, availableShifts, setAvailableSh
       <label>
         輸入人員名單（用逗號分隔）：
         <textarea
-          value={nurseNames || ''} // 這裡也加上 || '' 更安全
+          value={nurseNames || ''}
           onChange={e => setNurseNames(e.target.value)}
           rows={3}
         />
       </label>
       <div className="checkbox-groups">
-        {['D', 'E', 'N'].map(shift => (
+        {/* ✅ 將 Fn 加入可選班別 */}
+        {['D', 'E', 'N', 'Fn'].map(shift => (
           <div key={shift}>
             <strong>{shift} 班可上人員</strong>
             {allNames.map(name => (
@@ -43,3 +43,4 @@ function InputPanel({ nurseNames, setNurseNames, availableShifts, setAvailableSh
 }
 
 export default InputPanel;
+

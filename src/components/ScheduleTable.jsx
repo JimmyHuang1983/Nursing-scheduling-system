@@ -1,8 +1,8 @@
 import React from 'react';
 
-const SHIFT_OPTIONS = ['', 'D', 'E', 'N', 'OFF', '公', 'R'];
+// 將 Fn 加入下拉選單選項
+const SHIFT_OPTIONS = ['', 'D', 'E', 'N', 'Fn', 'OFF', '公', 'R'];
 
-// ✅ 接收 params 屬性
 function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, params }) {
 
   const handleChange = (nurse, day, value) => {
@@ -11,12 +11,15 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
     setSchedule(updated);
   };
 
+  // 渲染一個班別區塊 (D, E, N, Fn)
   const renderShiftBlock = (shift) => {
     const nurseList = Object.keys(schedule);
     const shiftNurses = nurseList.filter(nurse => availableShifts[shift]?.includes(nurse));
 
+    // 如果這個班別沒有任何可上人員，則不渲染此區塊
     if (shiftNurses.length === 0) return null;
 
+    // 計算此班別的每日總計人數
     const dailyTotals = Array.from({ length: daysInMonth }, (_, day) => {
       return shiftNurses.reduce((count, nurse) => {
         return schedule[nurse][day] === shift ? count + 1 : count;
@@ -28,7 +31,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
         {/* 渲染此班別下每一位護理師的班表行 */}
         {shiftNurses.map(nurse => {
           const offDays = schedule[nurse].filter(s => s === 'OFF' || s === 'R').length;
-          // ✅ 檢查休假是否不足
           const isOffDayShortage = offDays < params.minOff;
           return (
             <tr key={nurse}>
@@ -42,7 +44,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
                   </select>
                 </td>
               ))}
-              {/* ✅ 若休假不足，則套用不足樣式 */}
               <td className={isOffDayShortage ? 'shortage-cell' : ''}>{offDays}</td>
             </tr>
           );
@@ -51,11 +52,9 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
         <tr className="sum-row">
           <td>{shift} 班總計</td>
           {dailyTotals.map((total, i) => {
-            // ✅ 檢查每日排班人數是否不足
-            const required = params[shift];
+            const required = params[shift] || 0;
             const isShortage = total < required;
             return (
-               // ✅ 若人數不足，則套用不足樣式
               <td key={`total-${shift}-${i}`} className={isShortage ? 'shortage-cell' : ''}>
                 {total}
               </td>
@@ -78,18 +77,22 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
           <th style={{ minWidth: '60px' }}>休假</th>
         </tr>
       </thead>
-      {['D', 'E', 'N'].map((shift, index) => (
-        <React.Fragment key={shift}>
-          {renderShiftBlock(shift)}
-          {index < 2 && (
-            <tbody>
-              <tr className="spacer-row">
-                <td colSpan={daysInMonth + 2}></td>
-              </tr>
-            </tbody>
-          )}
-        </React.Fragment>
-      ))}
+      {/* 按照 D, Fn, E, N 的順序渲染班別區塊，並在中間加入間隔 */}
+      <React.Fragment>
+        {renderShiftBlock('D')}
+        <tbody key="spacer-d-fn">
+          <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+        </tbody>
+        {renderShiftBlock('Fn')}
+        <tbody key="spacer-fn-e">
+          <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+        </tbody>
+        {renderShiftBlock('E')}
+        <tbody key="spacer-e-n">
+          <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+        </tbody>
+        {renderShiftBlock('N')}
+      </React.Fragment>
     </table>
   );
 }
