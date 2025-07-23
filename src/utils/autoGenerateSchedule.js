@@ -20,13 +20,15 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         const counts = {};
         nurses.forEach(nurse => {
             counts[nurse] = { work: 0, off: 0 };
-            sch[nurse].forEach(shift => {
-                if (['D', 'E', 'N', 'Fn'].includes(shift)) {
-                    counts[nurse].work++;
-                } else if (['OFF', 'R'].includes(shift)) {
-                    counts[nurse].off++;
-                }
-            });
+            if (sch[nurse]) {
+                sch[nurse].forEach(shift => {
+                    if (['D', 'E', 'N', 'Fn'].includes(shift)) {
+                        counts[nurse].work++;
+                    } else if (['OFF', 'R'].includes(shift)) {
+                        counts[nurse].off++;
+                    }
+                });
+            }
         });
         return counts;
     };
@@ -178,4 +180,5 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
 export default autoGenerateSchedule;
 ```
+
 
