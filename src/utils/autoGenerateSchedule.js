@@ -92,7 +92,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
         
-        // 步驟 3: Fn 班在滿足自身需求後，支援 D 班 
+        // 步驟 3: Fn 班在滿足自身需求後，支援 D 班
         for (let day = 0; day < daysInMonth; day++) {
             let dCount = nurses.filter(n => currentSchedule[n][day] === 'D').length;
             if (dCount < dayShiftCount) {
@@ -179,6 +179,5 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 }
 
 export default autoGenerateSchedule;
-```
 
 
