@@ -163,6 +163,3 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
 }
 
 export default ScheduleTable;
-```
-
-
