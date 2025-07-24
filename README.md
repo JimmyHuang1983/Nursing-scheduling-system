@@ -1,12 +1,59 @@
-# React + Vite
+AI 護理排班系統 (AI Nursing Scheduling System)
+這是一個使用 React 和 Vite 開發的智慧護理排班系統，旨在自動化並優化護理人員的排班流程，確保在滿足每日人力需求的同時，也兼顧排班的公平性與合理性。
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+✨ 核心功能
+智慧排班演算法：點擊一下即可自動產生符合多重限制的班表。
 
-Currently, two official plugins are available:
+高度客製化：
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+可自訂日班(D)、功能班(Fn)、小夜(E)、大夜(N) 的每日人力需求。
 
-## Expanding the ESLint configuration
+可設定每位護理師的最低應休天數。
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+可設定每位護理師的最多連續上班天數。
+
+公平性機制：演算法會進行多次迭代與優化，以找出人力缺口最少、且每位護理師休假天數最平均的最佳班表。
+
+視覺化警示：
+
+當每日排班總人數未達需求時，該儲存格會以紅底標示。
+
+當個人休假天數未達最低要求時，該儲存格會以紅底標示。
+
+當連續上班天數超過上限時，相關儲存格會自動 highlight 提醒。
+
+彈性人力支援：
+
+Fn 班支援 D 班：在 D 班人力不足時，符合資格的 Fn 班人員會自動支援。
+
+夜班人力互相支援：可選功能，在 N 班人力不足時，符合資格且休假充足的 E 班人員會自動支援。
+
+一鍵 DEMO：內建 DEMO 按鈕，可快速填入預設的護理師名單與設定，方便快速展示系統功能。
+
+匯出至 Excel：可將產生好的班表一鍵匯出為 .xlsx 格式的檔案，方便後續存檔與列印。
+
+🛠️ 技術棧
+前端框架: React.js
+
+建置工具: Vite
+
+排程演算法: Custom JavaScript Logic
+
+部署: GitHub Actions & GitHub Pages
+
+🚀 如何使用
+輸入參數：在頁面上方設定各班別的每日需求人數、最低應休天數及最多連上天數。
+
+輸入人員：在「輸入人員名單」區塊，填入所有護理師的姓名，並用逗號分隔。
+
+設定資格：勾選每位護理師可以上的班別（D, E, N, Fn）。
+
+確認設定：點擊「確認人員與班別」按鈕，產生空白的班表框架。
+
+產生班表：點擊「產生班表」按鈕，系統將自動填滿班表。
+
+若對結果不滿意，可再次點擊「產生班表」，演算法會嘗試產生不同的組合。
+
+手動微調：可直接在表格的下拉選單中，手動調整任何一天的班別。
+
+匯出存檔：點擊「匯出至Excel」，即可下載班表檔案。
