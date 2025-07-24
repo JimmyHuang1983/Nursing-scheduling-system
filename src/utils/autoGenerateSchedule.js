@@ -89,8 +89,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
 
-        // 步驟 4: 執行支援邏輯
-        // Fn 支援 D
+        // 步驟 4: 執行 Fn 支援 D 班的邏輯
         for (let day = 0; day < daysInMonth; day++) {
             let dCount = nurses.filter(n => currentSchedule[n][day] === 'D').length;
             if (dCount < params.D) {
@@ -98,23 +97,8 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                 if (fnCandidates.length > 0) currentSchedule[fnCandidates[0]][day] = 'D';
             }
         }
-        // 夜班人力互相支援
-        if (mutualSupport) {
-            for (let day = 0; day < daysInMonth; day++) {
-                let nCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
-                if (nCount < params.N) {
-                    const eCandidates = shuffledNurses.filter(n =>
-                        currentSchedule[n][day] === '' &&
-                        availableShifts['E']?.includes(n) &&
-                        !availableShifts['N']?.includes(n) && // 確保是純E班人員
-                        checkConsecutive(currentSchedule, n, day)
-                    );
-                    if (eCandidates.length > 0) currentSchedule[eCandidates[0]][day] = 'N';
-                }
-            }
-        }
-
-        // 步驟 5: 將最後所有剩餘的空格填滿 'OFF'
+        
+        // 步驟 5: 將所有剩餘的空格都先填上 'OFF'
         shuffledNurses.forEach(nurse => {
             for (let day = 0; day < daysInMonth; day++) {
                 if (currentSchedule[nurse][day] === '') {
@@ -123,7 +107,43 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
         
-        // 步驟 6: **最終公平性優化 (Swap)**
+        // ✅ 步驟 6: **夜班人力互相支援 (邏輯微調)**
+        if (mutualSupport) {
+            for (let day = 0; day < daysInMonth; day++) {
+                let currentNCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
+                
+                // 當大夜班人數不足時，尋求支援
+                while (currentNCount < params.N) {
+                    const finalCounts = getShiftCounts(currentSchedule, nurses);
+                    
+                    // 找出候選人：
+                    // 1. 是 E 班資格者
+                    // 2. 當天排休 (OFF)
+                    // 3. **總休假天數 > 最低應休天數 (只動用多出來的假)**
+                    // 4. 隔天不能接 E 班
+                    // 5. 排序：優先選擇休假最多的人來支援
+                    const candidates = shuffledNurses
+                        .filter(nurse => 
+                            availableShifts['E']?.includes(nurse) &&
+                            currentSchedule[nurse][day] === 'OFF' &&
+                            finalCounts[nurse].off > minOff &&
+                            (day + 1 >= daysInMonth || currentSchedule[nurse][day + 1] !== 'E') &&
+                            checkConsecutive(currentSchedule, nurse, day)
+                        )
+                        .sort((a, b) => finalCounts[b].off - finalCounts[a].off);
+
+                    if (candidates.length > 0) {
+                        const supportNurse = candidates[0];
+                        currentSchedule[supportNurse][day] = 'N'; // 將 OFF 改為 N
+                        currentNCount++;
+                    } else {
+                        break; // 找不到人支援，換下一天
+                    }
+                }
+            }
+        }
+        
+        // 步驟 7: **最終公平性優化 (Swap)**
         for(let i=0; i<50; i++) { // 進行多次交換
             const finalCounts = getShiftCounts(currentSchedule, nurses);
             const sortedByOff = Object.entries(finalCounts).sort(([, a], [, b]) => a.off - b.off);
