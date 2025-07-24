@@ -179,3 +179,4 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 }
 
 export default autoGenerateSchedule;
+
