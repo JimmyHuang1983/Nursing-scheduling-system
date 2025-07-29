@@ -66,24 +66,24 @@ button:hover, .demo-button:hover {
   border-color: #1e7e34;
 }
 
-/* --- 表格樣式 (核心修改) --- */
+/* --- 表格樣式 --- */
 .schedule-table {
   border-collapse: collapse;
-  width: 100%; /* 強制表格寬度為 100% */
+  width: 100%; 
   margin-top: 20px;
-  font-size: 13px; /* 稍微縮小字體以容納更多內容 */
-  table-layout: fixed; /* 讓欄位均分寬度 */
+  font-size: 13px;
+  table-layout: fixed; 
 }
 
 .schedule-table th, .schedule-table td {
   border: 1px solid #ccc;
-  padding: 4px 2px; /* 減少 padding */
+  padding: 4px 2px;
   text-align: center;
   background-color: #fff;
   color: #000;
-  overflow: hidden; /* 隱藏超出內容 */
-  text-overflow: ellipsis; /* 用 ... 表示被截斷的文字 */
-  white-space: nowrap; /* 強制不換行 */
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 /* 特別設定姓名和休假欄位的寬度 */

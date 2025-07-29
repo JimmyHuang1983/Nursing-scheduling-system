@@ -54,6 +54,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
       if (!schedule[nurse]) return null;
 
       const offDays = schedule[nurse].filter(s => s === 'OFF' || s === 'R').length;
+      // ✅ 修正點：加入休假天數不足的判斷
       const isOffDayShortage = offDays < params.minOff;
       const consecutiveRanges = getOverlappingRanges(schedule[nurse], params.maxConsecutive);
       
@@ -72,6 +73,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
               </td>
             );
           })}
+          {/* ✅ 修正點：套用紅底樣式 */}
           <td className={isOffDayShortage ? 'shortage-cell' : ''}>{offDays}</td>
         </tr>
       );
@@ -97,12 +99,14 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
           const date = new Date(year, month, i + 1);
           const isWeekend = date.getDay() === 0 || date.getDay() === 6;
           
+          // ✅ 修正點：加入每日人力不足的判斷
           let isShortage = total < required;
           if (shift === 'Fn' && isWeekend) {
             isShortage = false; 
           }
           
           return (
+            // ✅ 修正點：套用紅底樣式
             <td key={`total-${shift}-${i}`} className={isShortage ? 'shortage-cell' : ''}>
               {total}
             </td>
