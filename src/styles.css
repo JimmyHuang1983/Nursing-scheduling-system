@@ -1,140 +1,135 @@
+/* 基本的全域樣式 */
+body {
+  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+  color: #213547;
+  background-color: #ffffff;
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* App 主容器，減少左右 padding 以提供更多空間給表格 */
 .App {
   font-family: sans-serif;
-  padding: 20px;
-  max-width: 1400px;
-  margin: auto;
+  padding: 20px 10px; /* 減少左右 padding */
+  color: #333;
 }
 
 h1 {
-  text-align: center;
+  font-size: 2.2em;
+  line-height: 1.1;
   color: #333;
+  text-align: center;
 }
 
+/* 輸入元件樣式 */
 .inputs, .input-panel {
-  background-color: #f9f9f9;
+  margin-bottom: 20px;
+  padding: 15px;
   border: 1px solid #ddd;
   border-radius: 8px;
-  padding: 15px;
-  margin-bottom: 20px;
+  background-color: #f9f9f9;
 }
 
-.inputs label, .input-panel label {
-    margin-right: 15px;
-    display: inline-block;
-    margin-bottom: 10px;
-}
-
-input[type="number"], input[type="month"] {
-  width: 80px;
-  padding: 5px;
+input, textarea, select {
+  margin: 5px;
+  padding: 8px;
   border-radius: 4px;
   border: 1px solid #ccc;
-  margin-left: 5px;
 }
 
-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px;
-    border-radius: 4px;
-    border: 1px solid #ccc;
-}
-
-.checkbox-groups {
-    display: flex;
-    justify-content: space-around;
-    margin-top: 10px;
-}
-.checkbox-groups div {
-    display: flex;
-    flex-direction: column;
-}
-.checkbox-groups label {
-    margin-right: 10px;
-}
-
-.actions-panel {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-button {
-  background-color: #007bff;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 5px;
+button, .demo-button {
+  border-radius: 8px;
+  border: 1px solid transparent;
+  padding: 0.6em 1.2em;
+  font-size: 1em;
+  font-weight: 500;
+  font-family: inherit;
+  background-color: #f9f9f9;
   cursor: pointer;
-  font-size: 16px;
-  margin: 0 10px;
-  transition: background-color 0.2s;
+  transition: border-color 0.25s;
+  margin: 5px;
 }
-
-button:hover {
-  background-color: #0056b3;
+button:hover, .demo-button:hover {
+  border-color: #646cff;
 }
 
 .demo-button {
-    background-color: #28a745; /* Green */
+  background-color: #28a745;
+  color: white;
+  border-color: #28a745;
 }
 .demo-button:hover {
-    background-color: #218838;
+  background-color: #218838;
+  border-color: #1e7e34;
 }
 
-
-/* --- Table Styles --- */
+/* --- 表格樣式 (核心修改) --- */
 .schedule-table {
   border-collapse: collapse;
-  /* 移除 width: 100%，讓表格可以自由延展 */
+  width: 100%; /* 強制表格寬度為 100% */
   margin-top: 20px;
-  font-size: 14px;
+  font-size: 13px; /* 稍微縮小字體以容納更多內容 */
+  table-layout: fixed; /* 讓欄位均分寬度 */
 }
 
 .schedule-table th, .schedule-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
+  border: 1px solid #ccc;
+  padding: 4px 2px; /* 減少 padding */
   text-align: center;
   background-color: #fff;
-  color: #333;
-  min-width: 55px; /* 為所有儲存格設定一個最小寬度 */
+  color: #000;
+  overflow: hidden; /* 隱藏超出內容 */
+  text-overflow: ellipsis; /* 用 ... 表示被截斷的文字 */
+  white-space: nowrap; /* 強制不換行 */
 }
 
-.schedule-table th {
-  background-color: #f2f2f2;
-  font-weight: bold;
+/* 特別設定姓名和休假欄位的寬度 */
+.schedule-table .nurse-name-header {
+  width: 90px;
+}
+.schedule-table .off-day-header {
+  width: 50px;
 }
 
+/* 下拉選單樣式 */
 .schedule-table select {
-    width: 100%;
-    border: none;
-    background: transparent;
-    text-align: center;
-    color: #333; /* 確保下拉選單文字顏色 */
-}
-.schedule-table select:focus {
-    outline: none;
+  width: 100%;
+  border: none;
+  background: transparent;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+  padding: 2px;
+  font-size: 13px;
+  color: #000;
 }
 
+/* 總計與間隔行樣式 */
 .sum-row {
   background-color: #e9ecef;
   font-weight: bold;
 }
 
 .spacer-row td {
-    border: none;
-    height: 15px;
-    background-color: transparent;
+  border: none;
+  height: 10px;
+  background-color: #f8f9fa;
 }
 
+/* 警示儲存格樣式 */
 .shortage-cell {
-  background-color: #f8d7da !important;
-  color: #721c24 !important;
+  background-color: #ffcdd2; /* 淡紅色 */
+  color: #c62828; /* 深紅色文字 */
   font-weight: bold;
 }
 
-/* 為連續上班超時的儲存格加上淡紅色底色 */
 .over-consecutive-cell {
-    background-color: #ffcccc !important; /* 淡紅色 */
+  background-color: #ffcdd2 !important; /* 強制覆蓋，確保紅色顯示 */
 }
 
-
+.over-consecutive-cell select {
+  background-color: #ffcdd2 !important;
+}

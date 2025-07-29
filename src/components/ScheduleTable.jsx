@@ -92,13 +92,12 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
       <tr className="sum-row">
         <td>{shift} 班總計</td>
         {dailyTotals.map((total, i) => {
-          const year = params.year || new Date().getFullYear();
-          const month = params.month !== undefined ? params.month : new Date().getMonth();
+          const year = schedule.__meta?.year || new Date().getFullYear();
+          const month = schedule.__meta?.month !== undefined ? schedule.__meta.month : new Date().getMonth();
           const date = new Date(year, month, i + 1);
           const isWeekend = date.getDay() === 0 || date.getDay() === 6;
           
           let isShortage = total < required;
-          // Fn班週末不檢查人力不足
           if (shift === 'Fn' && isWeekend) {
             isShortage = false; 
           }
@@ -115,51 +114,50 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
   };
 
   return (
-    <div style={{ overflowX: 'auto' }}>
-        <table className="schedule-table">
-        <thead>
-            <tr>
-            <th style={{ minWidth: '100px' }}>護理師</th>
-            {Array.from({ length: daysInMonth }, (_, i) => (
-                <th key={i + 1}>{i + 1}</th>
-            ))}
-            <th style={{ minWidth: '60px' }}>休假</th>
-            </tr>
-        </thead>
-        
-        {/* 日班與 Fn 班區塊 */}
-        <tbody>
-            {renderNurseRows(dNurses)}
-            {renderNurseRows(fnNurses)}
-            {renderTotalRow('D')}
-            {renderTotalRow('Fn')}
-        </tbody>
+    <table className="schedule-table">
+    <thead>
+        <tr>
+        <th className="nurse-name-header">護理師</th>
+        {Array.from({ length: daysInMonth }, (_, i) => (
+            <th key={i + 1}>{i + 1}</th>
+        ))}
+        <th className="off-day-header">休假</th>
+        </tr>
+    </thead>
+    
+    {/* 日班與 Fn 班區塊 */}
+    <tbody>
+        {renderNurseRows(dNurses)}
+        {renderNurseRows(fnNurses)}
+        {renderTotalRow('D')}
+        {renderTotalRow('Fn')}
+    </tbody>
 
-        {/* 分隔線 */}
-        <tbody>
-            <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
-        </tbody>
+    {/* 分隔線 */}
+    <tbody>
+        <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+    </tbody>
 
-        {/* 小夜班區塊 */}
-        <tbody>
-            {renderNurseRows(eNurses)}
-            {renderTotalRow('E')}
-        </tbody>
-        
-        {/* 分隔線 */}
-        <tbody>
-            <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
-        </tbody>
+    {/* 小夜班區塊 */}
+    <tbody>
+        {renderNurseRows(eNurses)}
+        {renderTotalRow('E')}
+    </tbody>
+    
+    {/* 分隔線 */}
+    <tbody>
+        <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+    </tbody>
 
-        {/* 大夜班區塊 */}
-        <tbody>
-            {renderNurseRows(nNurses)}
-            {renderTotalRow('N')}
-        </tbody>
+    {/* 大夜班區塊 */}
+    <tbody>
+        {renderNurseRows(nNurses)}
+        {renderTotalRow('N')}
+    </tbody>
 
-        </table>
-    </div>
+    </table>
   );
 }
 
 export default ScheduleTable;
+
