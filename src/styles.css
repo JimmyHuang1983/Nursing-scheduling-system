@@ -129,10 +129,17 @@ button:hover {
   background-color: #f8f9fa;
 }
 
-/* ✅ 修正點：為警示儲存格樣式加上 !important 以確保最高優先級 */
+/* 警示儲存格樣式 */
 .shortage-cell {
   background-color: #ffcdd2 !important; /* 淡紅色 */
   color: #c62828 !important; /* 深紅色文字 */
+  font-weight: bold;
+}
+
+/* ✅ 新增：人力過剩的警示樣式 */
+.surplus-cell {
+  background-color: #fff9c4 !important; /* 淡黃色 */
+  color: #f57f17 !important; /* 深黃色文字 */
   font-weight: bold;
 }
 

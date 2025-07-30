@@ -54,7 +54,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
       if (!schedule[nurse]) return null;
 
       const offDays = schedule[nurse].filter(s => s === 'OFF' || s === 'R').length;
-      // ✅ 修正點：加入休假天數不足的判斷
       const isOffDayShortage = offDays < params.minOff;
       const consecutiveRanges = getOverlappingRanges(schedule[nurse], params.maxConsecutive);
       
@@ -73,7 +72,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
               </td>
             );
           })}
-          {/* ✅ 修正點：套用紅底樣式 */}
           <td className={isOffDayShortage ? 'shortage-cell' : ''}>{offDays}</td>
         </tr>
       );
@@ -87,27 +85,32 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
         return schedule[nurse] && schedule[nurse][day] === shift ? count + 1 : count;
       }, 0);
     });
-
-    const required = params[shift] || 0;
     
     return (
       <tr className="sum-row">
         <td>{shift} 班總計</td>
         {dailyTotals.map((total, i) => {
+          const required = params[shift] || 0;
           const year = schedule.__meta?.year || new Date().getFullYear();
           const month = schedule.__meta?.month !== undefined ? schedule.__meta.month : new Date().getMonth();
           const date = new Date(year, month, i + 1);
           const isWeekend = date.getDay() === 0 || date.getDay() === 6;
           
-          // ✅ 修正點：加入每日人力不足的判斷
-          let isShortage = total < required;
+          // ✅ 核心修改：判斷人力過剩或不足
+          let cellClass = '';
+          if (total < required) {
+            cellClass = 'shortage-cell'; // 人力不足
+          } else if (total > required) {
+            cellClass = 'surplus-cell'; // 人力過剩
+          }
+
+          // Fn班週末不檢查人力問題 (無論過多或過少)
           if (shift === 'Fn' && isWeekend) {
-            isShortage = false; 
+            cellClass = ''; 
           }
           
           return (
-            // ✅ 修正點：套用紅底樣式
-            <td key={`total-${shift}-${i}`} className={isShortage ? 'shortage-cell' : ''}>
+            <td key={`total-${shift}-${i}`} className={cellClass}>
               {total}
             </td>
           );
