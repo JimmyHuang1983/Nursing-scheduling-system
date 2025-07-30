@@ -40,6 +40,8 @@ input, textarea, select {
   border: 1px solid #ccc;
 }
 
+/* ✅ 按鈕樣式 (核心修改) */
+/* 基礎按鈕樣式 */
 button, .demo-button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -47,24 +49,32 @@ button, .demo-button {
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #f9f9f9;
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: all 0.25s;
   margin: 5px;
-}
-button:hover, .demo-button:hover {
-  border-color: #646cff;
+  color: white; /* 預設文字為白色 */
 }
 
+/* 一般按鈕 (藍色)，使其更顯眼 */
+button {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+button:hover {
+  background-color: #0056b3;
+  border-color: #0056b3;
+}
+
+/* DEMO 按鈕 (綠色) */
 .demo-button {
   background-color: #28a745;
-  color: white;
   border-color: #28a745;
 }
 .demo-button:hover {
   background-color: #218838;
   border-color: #1e7e34;
 }
+
 
 /* --- 表格樣式 --- */
 .schedule-table {
@@ -133,3 +143,4 @@ button:hover, .demo-button:hover {
 .over-consecutive-cell select {
   background-color: #ffcdd2 !important;
 }
+
