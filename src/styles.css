@@ -10,10 +10,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* App 主容器，減少左右 padding 以提供更多空間給表格 */
+/* App 主容器 */
 .App {
   font-family: sans-serif;
-  padding: 20px 10px; /* 減少左右 padding */
+  padding: 20px;
   color: #333;
 }
 
@@ -24,13 +24,24 @@ h1 {
   text-align: center;
 }
 
-/* 輸入元件樣式 */
+/* 控制項與輸入元件樣式 */
+.controls {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
 .inputs, .input-panel {
   margin-bottom: 20px;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: #f9f9f9;
+}
+
+.inputs label {
+  margin-right: 15px;
+  display: inline-block;
+  margin-bottom: 5px;
 }
 
 input, textarea, select {
@@ -40,8 +51,7 @@ input, textarea, select {
   border: 1px solid #ccc;
 }
 
-/* ✅ 按鈕樣式 (核心修改) */
-/* 基礎按鈕樣式 */
+/* 按鈕樣式 */
 button, .demo-button {
   border-radius: 8px;
   border: 1px solid transparent;
@@ -52,10 +62,9 @@ button, .demo-button {
   cursor: pointer;
   transition: all 0.25s;
   margin: 5px;
-  color: white; /* 預設文字為白色 */
+  color: white;
 }
 
-/* 一般按鈕 (藍色)，使其更顯眼 */
 button {
   background-color: #007bff;
   border-color: #007bff;
@@ -65,7 +74,6 @@ button:hover {
   border-color: #0056b3;
 }
 
-/* DEMO 按鈕 (綠色) */
 .demo-button {
   background-color: #28a745;
   border-color: #28a745;
@@ -75,14 +83,13 @@ button:hover {
   border-color: #1e7e34;
 }
 
-
-/* --- 表格樣式 --- */
+/* 表格樣式 */
 .schedule-table {
   border-collapse: collapse;
-  width: 100%; 
+  width: 100%;
   margin-top: 20px;
   font-size: 13px;
-  table-layout: fixed; 
+  table-layout: fixed;
 }
 
 .schedule-table th, .schedule-table td {
@@ -96,57 +103,88 @@ button:hover {
   white-space: nowrap;
 }
 
-/* 特別設定姓名和休假欄位的寬度 */
-.schedule-table .nurse-name-header {
-  width: 90px;
-}
-.schedule-table .off-day-header {
-  width: 50px;
-}
+.schedule-table .nurse-name-header { width: 90px; }
+.schedule-table .off-day-header { width: 50px; }
 
-/* 下拉選單樣式 */
 .schedule-table select {
   width: 100%;
   border: none;
   background: transparent;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  appearance: none;
   padding: 2px;
   font-size: 13px;
   color: #000;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
-/* 總計與間隔行樣式 */
-.sum-row {
-  background-color: #e9ecef;
-  font-weight: bold;
-}
-
-.spacer-row td {
-  border: none;
-  height: 10px;
-  background-color: #f8f9fa;
-}
+.sum-row { background-color: #e9ecef; font-weight: bold; }
+.spacer-row td { border: none; height: 10px; background-color: #f8f9fa; }
 
 /* 警示儲存格樣式 */
 .shortage-cell {
-  background-color: #ffcdd2 !important; /* 淡紅色 */
-  color: #c62828 !important; /* 深紅色文字 */
+  background-color: #ffcdd2 !important;
+  color: #c62828 !important;
   font-weight: bold;
 }
-
-/* ✅ 新增：人力過剩的警示樣式 */
 .surplus-cell {
-  background-color: #fff9c4 !important; /* 淡黃色 */
-  color: #f57f17 !important; /* 深黃色文字 */
+  background-color: #FFF9C4 !important; /* 淡黃色 */
+  color: #F57F17 !important; /* 深黃色文字 */
   font-weight: bold;
 }
-
-.over-consecutive-cell {
-  background-color: #ffcdd2 !important; /* 強制覆蓋，確保紅色顯示 */
-}
-
-.over-consecutive-cell select {
+.over-consecutive-cell, .over-consecutive-cell select {
   background-color: #ffcdd2 !important;
 }
+
+/* 歡迎視窗樣式 */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.6);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 20px 30px;
+  border-radius: 8px;
+  max-width: 600px;
+  width: 90%;
+  position: relative;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+  max-height: 85vh;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.modal-close-button {
+  position: absolute;
+  top: 10px;
+  right: 15px;
+  background: transparent;
+  border: none;
+  font-size: 2rem;
+  line-height: 1;
+  color: #aaa;
+  cursor: pointer;
+  padding: 0;
+}
+.modal-close-button:hover {
+  color: #333;
+}
+
+.modal-content h3 {
+    margin-top: 20px;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 5px;
+}
+.modal-content ol, .modal-content ul {
+    padding-left: 20px;
+}
+
