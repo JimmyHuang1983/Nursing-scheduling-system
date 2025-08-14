@@ -17,12 +17,6 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
     const { minOff, maxConsecutive } = params;
 
     // --- 輔助函式 ---
-    const isWeekday = (day) => {
-        const date = new Date(year, month, day + 1);
-        const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
-        return dayOfWeek >= 1 && dayOfWeek <= 5;
-    };
-
     const getShiftCounts = (sch, nurseList) => {
         const counts = {};
         nurseList.forEach(nurse => {
@@ -40,23 +34,35 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
     const checkConsecutive = (sch, nurse, day) => {
         let consecutive = 0;
-        for (let i = day - 1; i >= 0; i--) {
+        // 檢查從今天往前算的連續工作天數
+        for (let i = day; i >= 0; i--) {
             if (['D', 'E', 'N', 'Fn'].includes(sch[nurse][i])) consecutive++;
             else break;
         }
-        return consecutive < maxConsecutive;
+        // 注意：這裡的判斷是 <= maxConsecutive，因為 max=6 表示最多可以連上6天
+        return consecutive <= maxConsecutive;
     };
-    
+
     const isShiftSequenceValid = (schedule, nurse, day, newShift) => {
         const prevDayShift = day > 0 ? schedule[nurse][day - 1] : null;
         const nextDayShift = day < daysInMonth - 1 ? schedule[nurse][day + 1] : null;
 
+        // 規則1：上大夜(N)的「前一天」和「後一天」都不能是D/E/Fn班
         if (newShift === 'N') {
-            if (['D', 'E', 'Fn'].includes(prevDayShift) || ['D', 'E', 'Fn'].includes(nextDayShift)) return false;
+            if (['D', 'E', 'Fn'].includes(prevDayShift) || ['D', 'E', 'Fn'].includes(nextDayShift)) {
+                return false;
+            }
         }
+        // 規則2：上D/E/Fn班的「前一天」不能是大夜(N)
         if (['D', 'E', 'Fn'].includes(newShift)) {
             if (prevDayShift === 'N') return false;
         }
+        
+        // 規則3: 上小夜(E)的「後一天」不能是大夜(N)
+        if (newShift === 'E') {
+             if (nextDayShift === 'N') return false;
+        }
+        
         return true;
     };
 
@@ -75,7 +81,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
 
-        // 步驟 2: **人力優先**，填滿每日各班別基礎人力 (使用原始資格)
+        // 步驟 2: **人力優先**，填滿每日各班別基礎人力 (嚴格遵守原始資格)
         for (let day = 0; day < daysInMonth; day++) {
             const shiftsInOrder = ['Fn', 'N', 'E', 'D'];
             for (const shift of shiftsInOrder) {
@@ -86,7 +92,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                 const candidates = shuffledNurses
                     .filter(n => 
                         currentSchedule[n][day] === '' && 
-                        availableShifts[shift]?.includes(n) && // ✅ 使用原始資格
+                        availableShifts[shift]?.includes(n) && // ✅ 此處嚴格遵守原始資格
                         checkConsecutive(currentSchedule, n, day) &&
                         isShiftSequenceValid(currentSchedule, n, day, shift)
                     )
@@ -94,13 +100,18 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
                 for(const candidate of candidates) {
                     if (assignedCount >= required) break;
-                    currentSchedule[candidate][day] = shift;
-                    assignedCount++;
+                    // 模擬指派並檢查合法性
+                    const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
+                    tempSchedule[candidate][day] = shift;
+                    if(checkConsecutive(tempSchedule, candidate, day)) {
+                        currentSchedule[candidate][day] = shift;
+                        assignedCount++;
+                    }
                 }
             }
         }
 
-        // 步驟 3: **公平性調整**，優先把休假補滿
+        // 步驟 3 & 4: 補滿休假 & Fn支援D班
         shuffledNurses.forEach(nurse => {
             let shiftCounts = getShiftCounts(currentSchedule, nurses);
             let currentOffs = shiftCounts[nurse].off;
@@ -113,24 +124,27 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                 }
             }
         });
-
-        // 步驟 4: 執行 Fn 支援 D 班的邏輯
         for (let day = 0; day < daysInMonth; day++) {
             let dCount = nurses.filter(n => currentSchedule[n][day] === 'D').length;
             if (dCount < params.D) {
-                const fnCandidates = shuffledNurses.filter(n => 
+                 const fnCandidates = shuffledNurses.filter(n => 
                     currentSchedule[n][day] === '' && 
                     availableShifts['Fn']?.includes(n) && 
-                    availableShifts['D']?.includes(n) && 
-                    checkConsecutive(currentSchedule, n, day) &&
-                    isShiftSequenceValid(currentSchedule, n, day, 'D')
+                    availableShifts['D']?.includes(n) // Fn支援D，需要兩邊都有資格
                 );
-                if (fnCandidates.length > 0) currentSchedule[fnCandidates[0]][day] = 'D';
+                if (fnCandidates.length > 0) {
+                     const candidate = fnCandidates[0];
+                     const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
+                     tempSchedule[candidate][day] = 'D';
+                     if(checkConsecutive(tempSchedule, candidate, day) && isShiftSequenceValid(tempSchedule, candidate, day, 'D')) {
+                        currentSchedule[candidate][day] = 'D';
+                     }
+                }
             }
         }
         
         // 步驟 5: 將所有剩餘的空格都先填上 'OFF'
-        shuffledNurses.forEach(nurse => {
+        nurses.forEach(nurse => {
             for (let day = 0; day < daysInMonth; day++) {
                 if (currentSchedule[nurse][day] === '') {
                     currentSchedule[nurse][day] = 'OFF';
@@ -138,9 +152,8 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
         
-        // ✅ 步驟 6: **夜班人力互相支援 (邏輯重寫)**
+        // ✅ 步驟 6: 小夜與大夜人力互相支援 (修正版)
         if (mutualSupport) {
-            // 進行多輪迭代，以持續優化和平衡
             for (let iter = 0; iter < 50; iter++) { 
                 const currentCounts = getShiftCounts(currentSchedule, nurses);
                 const eNurses = nurses.filter(n => availableShifts['E']?.includes(n));
@@ -148,50 +161,77 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
                 if (eNurses.length === 0 || nNurses.length === 0) break;
 
-                let swapped = false;
+                const avgOffE = eNurses.reduce((sum, n) => sum + (currentCounts[n]?.off || 0), 0) / eNurses.length;
+                const avgOffN = nNurses.reduce((sum, n) => sum + (currentCounts[n]?.off || 0), 0) / nNurses.length;
 
-                // 全面搜索所有 E 班和 N 班的組合
-                for (const donor of eNurses.sort((a, b) => currentCounts[b].off - currentCounts[a].off)) { // 從休最多的E開始
-                    for (const recipient of nNurses.sort((a, b) => currentCounts[a].off - currentCounts[b].off)) { // 從休最少的N開始
-                        
-                        // **只要休假天數差異大於 1，就嘗試交換**
-                        if (currentCounts[donor].off > currentCounts[recipient].off + 1) {
+                let swapped = false;
+                
+                // 判斷支援方向
+                // 情況一：大夜班(N)比較累 -> 小夜(E)來支援
+                if (avgOffE > avgOffN + 0.5) {
+                    const donors = eNurses.sort((a, b) => currentCounts[b].off - currentCounts[a].off);
+                    const recipients = nNurses.sort((a, b) => currentCounts[a].off - currentCounts[b].off);
+                    
+                    for (const donor of donors) { // 捐贈者 (休假較多的E)
+                        for (const recipient of recipients) { // 接受者 (休假較少的N)
+                            if (currentCounts[donor].off <= currentCounts[recipient].off + 1) continue;
+
                             for (let day = 0; day < daysInMonth; day++) {
-                                // 尋找一個可以交換的機會點: E班人員OFF, N班人員上N班
-                                if (
-                                    currentSchedule[donor][day] === 'OFF' && 
-                                    currentSchedule[recipient][day] === 'N'
-                                ) {
-                                    // 模擬交換後的班表，以進行合法性檢查
+                                if (currentSchedule[donor][day] === 'OFF' && currentSchedule[recipient][day] === 'N') {
+                                    // 關鍵：此處不再檢查 availableShifts['N'] 是否包含 donor
+                                    // 因為啟動了支援，所以 E 班人員臨時獲得上 N 班的資格
                                     const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
                                     tempSchedule[donor][day] = 'N';
                                     tempSchedule[recipient][day] = 'OFF';
-                                    
-                                    // 檢查捐贈者(E班)交換後是否合法
-                                    if (
-                                        checkConsecutive(tempSchedule, donor, day) &&
-                                        isShiftSequenceValid(tempSchedule, donor, day, 'N') &&
-                                        isShiftSequenceValid(tempSchedule, recipient, day, 'OFF')
-                                    ) {
-                                        // 執行交換
+
+                                    if (checkConsecutive(tempSchedule, donor, day) && isShiftSequenceValid(tempSchedule, donor, day, 'N')) {
                                         currentSchedule[donor][day] = 'N';
                                         currentSchedule[recipient][day] = 'OFF';
                                         swapped = true;
-                                        break; // 完成一次交換，跳出 day 迴圈
+                                        break;
                                     }
                                 }
                             }
+                            if (swapped) break;
                         }
-                        if (swapped) break; // 跳出 recipient 迴圈
+                        if (swapped) break;
                     }
-                    if (swapped) break; // 跳出 donor 迴圈
                 }
+                // 情況二：小夜班(E)比較累 -> 大夜(N)來支援
+                else if (avgOffN > avgOffE + 0.5) {
+                    const donors = nNurses.sort((a, b) => currentCounts[b].off - currentCounts[a].off);
+                    const recipients = eNurses.sort((a, b) => currentCounts[a].off - currentCounts[b].off);
 
-                if (!swapped) break; // 如果這一整輪都沒有發生任何交換，提前結束
+                    for (const donor of donors) { // 捐贈者 (休假較多的N)
+                        for (const recipient of recipients) { // 接受者 (休假較少的E)
+                           if (currentCounts[donor].off <= currentCounts[recipient].off + 1) continue;
+
+                            for (let day = 0; day < daysInMonth; day++) {
+                                if (currentSchedule[donor][day] === 'OFF' && currentSchedule[recipient][day] === 'E') {
+                                    // 關鍵：此處不再檢查 availableShifts['E'] 是否包含 donor
+                                    const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
+                                    tempSchedule[donor][day] = 'E';
+                                    tempSchedule[recipient][day] = 'OFF';
+
+                                    if (checkConsecutive(tempSchedule, donor, day) && isShiftSequenceValid(tempSchedule, donor, day, 'E')) {
+                                        currentSchedule[donor][day] = 'E';
+                                        currentSchedule[recipient][day] = 'OFF';
+                                        swapped = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (swapped) break;
+                        }
+                        if (swapped) break;
+                    }
+                }
+                
+                if (!swapped) break;
             }
         }
         
-        // 步驟 7: **最終公平性優化 (Swap)**
+        // 步驟 7: **最終公平性優化 (Swap)** - 此處恢復嚴格資格檢查
         for(let i=0; i < 50; i++) { 
             const finalCounts = getShiftCounts(currentSchedule, nurses);
             const sortedByOff = Object.entries(finalCounts).sort(([, a], [, b]) => a.off - b.off);
@@ -200,27 +240,29 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             const leastRestedNurse = sortedByOff[0][0];
             const mostRestedNurse = sortedByOff[sortedByOff.length - 1][0];
 
-            if (finalCounts[mostRestedNurse].off - finalCounts[leastRestedNurse].off > 1) {
+            if (finalCounts[mostRestedNurse].off > finalCounts[leastRestedNurse].off + 1) {
                 let swapped = false;
                 for (let day = 0; day < daysInMonth; day++) {
                     const mostShift = currentSchedule[mostRestedNurse][day];
                     const leastShift = currentSchedule[leastRestedNurse][day];
                     
                     if (mostShift === 'OFF' && ['D', 'E', 'N', 'Fn'].includes(leastShift)) {
-                        const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
-                        tempSchedule[mostRestedNurse][day] = leastShift;
-                        tempSchedule[leastRestedNurse][day] = 'OFF';
+                        // 在最終優化階段，換班必須基於原始資格
+                        if (availableShifts[leastShift]?.includes(mostRestedNurse)) {
+                           const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
+                           tempSchedule[mostRestedNurse][day] = leastShift;
+                           tempSchedule[leastRestedNurse][day] = 'OFF';
 
-                        if (
-                            availableShifts[leastShift]?.includes(mostRestedNurse) &&
-                            checkConsecutive(tempSchedule, mostRestedNurse, day) &&
-                            isShiftSequenceValid(tempSchedule, mostRestedNurse, day, leastShift) &&
-                            isShiftSequenceValid(tempSchedule, leastRestedNurse, day, 'OFF')
-                        ) {
-                           currentSchedule[mostRestedNurse][day] = leastShift;
-                           currentSchedule[leastRestedNurse][day] = 'OFF';
-                           swapped = true;
-                           break;
+                           if (
+                               checkConsecutive(tempSchedule, mostRestedNurse, day) &&
+                               isShiftSequenceValid(tempSchedule, mostRestedNurse, day, leastShift) &&
+                               isShiftSequenceValid(tempSchedule, leastRestedNurse, day, 'OFF')
+                           ) {
+                              currentSchedule[mostRestedNurse][day] = leastShift;
+                              currentSchedule[leastRestedNurse][day] = 'OFF';
+                              swapped = true;
+                              break;
+                           }
                         }
                     }
                 }
@@ -259,4 +301,3 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 }
 
 export default autoGenerateSchedule;
-
