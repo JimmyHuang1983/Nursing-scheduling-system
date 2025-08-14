@@ -59,11 +59,23 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
       
       return (
         <tr key={nurse}>
-          <td>{nurse}</td>
+          <td className="nurse-name-cell">{nurse}</td>
           {schedule[nurse].map((s, i) => {
             const isOver = consecutiveRanges.some(range => i >= range.start && i <= range.end);
+            
+            // ✅ 新增：檢查不合理的班別銜接
+            const prevShift = i > 0 ? schedule[nurse][i - 1] : null;
+            const isInvalidSequence = 
+                (prevShift === 'N' && (s === 'D' || s === 'E')) ||
+                (prevShift === 'E' && s === 'D');
+
+            // 組合 CSS class
+            let cellClassName = '';
+            if (isOver) cellClassName += ' over-consecutive-cell';
+            if (isInvalidSequence) cellClassName += ' invalid-sequence-cell';
+
             return (
-              <td key={i} className={isOver ? 'over-consecutive-cell' : ''}>
+              <td key={i} className={cellClassName.trim()}>
                 <select value={s || ''} onChange={e => handleChange(nurse, i, e.target.value)}>
                   {SHIFT_OPTIONS.map(opt => (
                     <option key={opt} value={opt}>{opt}</option>
@@ -72,7 +84,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
               </td>
             );
           })}
-          <td className={isOffDayShortage ? 'shortage-cell' : ''}>{offDays}</td>
+          <td className={isOffDayShortage ? 'shortage-cell' : 'off-day-cell'}>{offDays}</td>
         </tr>
       );
     });
@@ -96,15 +108,13 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
           const date = new Date(year, month, i + 1);
           const isWeekend = date.getDay() === 0 || date.getDay() === 6;
           
-          // ✅ 核心修改：判斷人力過剩或不足
           let cellClass = '';
           if (total < required) {
-            cellClass = 'shortage-cell'; // 人力不足
+            cellClass = 'shortage-cell';
           } else if (total > required) {
-            cellClass = 'surplus-cell'; // 人力過剩
+            cellClass = 'surplus-cell';
           }
 
-          // Fn班週末不檢查人力問題 (無論過多或過少)
           if (shift === 'Fn' && isWeekend) {
             cellClass = ''; 
           }
@@ -142,7 +152,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
 
     {/* 分隔線 */}
     <tbody>
-        <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+        <tr className="spacer-row"><td colSpan={daysInMonth + 3}></td></tr>
     </tbody>
 
     {/* 小夜班區塊 */}
@@ -153,7 +163,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
     
     {/* 分隔線 */}
     <tbody>
-        <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
+        <tr className="spacer-row"><td colSpan={daysInMonth + 3}></td></tr>
     </tbody>
 
     {/* 大夜班區塊 */}

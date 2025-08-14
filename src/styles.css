@@ -24,24 +24,13 @@ h1 {
   text-align: center;
 }
 
-/* 控制項與輸入元件樣式 */
-.controls {
-  text-align: center;
-  margin-bottom: 15px;
-}
-
+/* 輸入元件樣式 */
 .inputs, .input-panel {
   margin-bottom: 20px;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: #f9f9f9;
-}
-
-.inputs label {
-  margin-right: 15px;
-  display: inline-block;
-  margin-bottom: 5px;
 }
 
 input, textarea, select {
@@ -54,7 +43,7 @@ input, textarea, select {
 /* 按鈕樣式 */
 button, .demo-button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid #6c757d; /* 灰色邊框 */
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
@@ -62,20 +51,17 @@ button, .demo-button {
   cursor: pointer;
   transition: all 0.25s;
   margin: 5px;
-  color: white;
+  background-color: #f8f9fa; /* 淡灰色背景 */
+  color: #212529; /* 深色文字 */
 }
-
-button {
-  background-color: #007bff;
-  border-color: #007bff;
-}
-button:hover {
-  background-color: #0056b3;
-  border-color: #0056b3;
+button:hover, .demo-button:hover {
+  background-color: #e2e6ea;
+  border-color: #5a6268;
 }
 
 .demo-button {
   background-color: #28a745;
+  color: white;
   border-color: #28a745;
 }
 .demo-button:hover {
@@ -83,7 +69,7 @@ button:hover {
   border-color: #1e7e34;
 }
 
-/* 表格樣式 */
+/* --- 表格樣式 --- */
 .schedule-table {
   border-collapse: collapse;
   width: 100%;
@@ -103,23 +89,43 @@ button:hover {
   white-space: nowrap;
 }
 
-.schedule-table .nurse-name-header { width: 90px; }
-.schedule-table .off-day-header { width: 50px; }
+/* 特別設定姓名和休假欄位的寬度 */
+.schedule-table .nurse-name-header,
+.schedule-table .nurse-name-cell {
+  width: 90px;
+  min-width: 90px;
+}
+.schedule-table .off-day-header,
+.schedule-table .off-day-cell {
+  width: 50px;
+  min-width: 50px;
+}
 
+/* 下拉選單樣式 */
 .schedule-table select {
   width: 100%;
   border: none;
   background: transparent;
-  padding: 2px;
-  font-size: 13px;
-  color: #000;
   -webkit-appearance: none;
   -moz-appearance: none;
   appearance: none;
+  padding: 2px;
+  font-size: 13px;
+  color: #000;
+  text-align: center; /* 讓選項置中 */
 }
 
-.sum-row { background-color: #e9ecef; font-weight: bold; }
-.spacer-row td { border: none; height: 10px; background-color: #f8f9fa; }
+/* 總計與間隔行樣式 */
+.sum-row {
+  background-color: #e9ecef;
+  font-weight: bold;
+}
+
+.spacer-row td {
+  border: none;
+  height: 10px;
+  background-color: #f8f9fa;
+}
 
 /* 警示儲存格樣式 */
 .shortage-cell {
@@ -127,22 +133,32 @@ button:hover {
   color: #c62828 !important;
   font-weight: bold;
 }
+
 .surplus-cell {
-  background-color: #FFF9C4 !important; /* 淡黃色 */
-  color: #F57F17 !important; /* 深黃色文字 */
-  font-weight: bold;
+    background-color: #FFF9C4 !important; /* 淡黃色 */
+    color: #F57F17 !important; /* 深黃色文字 */
+    font-weight: bold;
 }
-.over-consecutive-cell, .over-consecutive-cell select {
+
+.over-consecutive-cell,
+.over-consecutive-cell select {
   background-color: #ffcdd2 !important;
 }
 
-/* 歡迎視窗樣式 */
+/* 不合理班別銜接的樣式 */
+.invalid-sequence-cell,
+.invalid-sequence-cell select {
+    background-color: #FFCC80 !important; /* 醒目的橘色 */
+}
+
+
+/* Modal (彈出視窗) 樣式 */
 .modal-overlay {
   position: fixed;
   top: 0;
   left: 0;
-  width: 100%;
-  height: 100%;
+  right: 0;
+  bottom: 0;
   background-color: rgba(0, 0, 0, 0.6);
   display: flex;
   justify-content: center;
@@ -151,40 +167,36 @@ button:hover {
 }
 
 .modal-content {
-  background: white;
+  background-color: white;
   padding: 20px 30px;
   border-radius: 8px;
   max-width: 600px;
   width: 90%;
-  position: relative;
-  box-shadow: 0 5px 15px rgba(0,0,0,0.3);
-  max-height: 85vh;
+  max-height: 80vh;
   overflow-y: auto;
-  text-align: left;
+  position: relative;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content h2 {
+  margin-top: 0;
+}
+
+.modal-content ul {
+  padding-left: 20px;
 }
 
 .modal-close-button {
   position: absolute;
   top: 10px;
-  right: 15px;
-  background: transparent;
+  right: 10px;
+  background: none;
   border: none;
-  font-size: 2rem;
-  line-height: 1;
-  color: #aaa;
+  font-size: 1.8rem;
   cursor: pointer;
-  padding: 0;
+  color: #888;
 }
 .modal-close-button:hover {
-  color: #333;
-}
-
-.modal-content h3 {
-    margin-top: 20px;
-    border-bottom: 1px solid #eee;
-    padding-bottom: 5px;
-}
-.modal-content ol, .modal-content ul {
-    padding-left: 20px;
+  color: #000;
 }
 
