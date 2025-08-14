@@ -106,48 +106,47 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
         
-        // ✅ 步驟 6: **夜班人力互相支援 (邏輯增強)**
+        // ✅ 步驟 6: **夜班人力互相支援 (邏輯重寫)**
         if (mutualSupport) {
-            for (let i = 0; i < 5; i++) { // 進行多次平衡迭代
-                let changed = false;
-                for (let day = 0; day < daysInMonth; day++) {
-                    const currentNCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
-                    
-                    if (currentNCount < params.N) {
-                        const finalCounts = getShiftCounts(currentSchedule, nurses);
-                        
-                        const candidates = shuffledNurses
-                            .filter(nurse => 
-                                availableShifts['E']?.includes(nurse) &&
-                                currentSchedule[nurse][day] === 'OFF' &&
-                                finalCounts[nurse].off > minOff &&
-                                (day + 1 >= daysInMonth || !['E'].includes(currentSchedule[nurse][day + 1])) &&
-                                (day === 0 || !['E'].includes(currentSchedule[nurse][day - 1]))
-                            )
-                            .sort((a, b) => finalCounts[b].off - finalCounts[a].off);
+            // 進行多輪迭代，以持續優化和平衡
+            for (let i = 0; i < 20; i++) { 
+                const currentCounts = getShiftCounts(currentSchedule, nurses);
+                const eNurses = nurses.filter(n => availableShifts['E']?.includes(n));
+                const nNurses = nurses.filter(n => availableShifts['N']?.includes(n) && !eNurses.includes(n));
 
-                        if (candidates.length > 0) {
-                            const supportNurse = candidates[0];
-                            currentSchedule[supportNurse][day] = 'N';
-                            changed = true;
+                if (eNurses.length === 0 || nNurses.length === 0) break;
 
-                            // **回填 E 班人力**
-                            const eCounts = getShiftCounts(currentSchedule, nurses);
-                            const backfillCandidates = shuffledNurses
-                                .filter(n => 
-                                    availableShifts['E']?.includes(n) &&
-                                    currentSchedule[n][day] === 'OFF' &&
-                                    n !== supportNurse
-                                )
-                                .sort((a,b) => eCounts[a].work - eCounts[b].work);
-                            
-                            if (backfillCandidates.length > 0) {
-                                currentSchedule[backfillCandidates[0]][day] = 'E';
-                            }
+                const sortedEByOff = eNurses.sort((a, b) => currentCounts[b].off - currentCounts[a].off);
+                const sortedNByOff = nNurses.sort((a, b) => currentCounts[a].off - currentCounts[b].off);
+
+                const donor = sortedEByOff[0]; // 休假最多的 E 班
+                const recipient = sortedNByOff[0]; // 休假最少的 N 班
+
+                // **只要休假天數差異大於 1，就嘗試交換**
+                if (currentCounts[donor].off > currentCounts[recipient].off + 1) {
+                    let swapped = false;
+                    for (let day = 0; day < daysInMonth; day++) {
+                        // 尋找一個可以交換的機會點
+                        if (
+                            currentSchedule[donor][day] === 'OFF' && // 捐贈者當天是 OFF
+                            currentSchedule[recipient][day] === 'N' && // 接受者當天是 N
+                            availableShifts['N']?.includes(donor) && // 捐贈者可以上 N 班
+                            // 檢查捐贈者交換後的班別銜接是否合法
+                            (day + 1 >= daysInMonth || !['E'].includes(currentSchedule[donor][day + 1])) &&
+                            (day === 0 || !['E'].includes(currentSchedule[donor][day - 1])) &&
+                            checkConsecutive(currentSchedule, donor, day)
+                        ) {
+                            // 執行交換
+                            currentSchedule[donor][day] = 'N';
+                            currentSchedule[recipient][day] = 'OFF';
+                            swapped = true;
+                            break; // 完成一次交換，進入下一輪迭代
                         }
                     }
+                    if (!swapped) break; // 如果找不到任何可交換的機會，就結束優化
+                } else {
+                    break; // 休假已平衡
                 }
-                 if (!changed) break; // 如果一輪下來沒有任何改變，就提前結束
             }
         }
         
