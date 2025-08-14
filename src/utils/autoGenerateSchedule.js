@@ -109,10 +109,10 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         // ✅ 步驟 6: **夜班人力互相支援 (邏輯重寫)**
         if (mutualSupport) {
             // 進行多輪迭代，以持續優化和平衡
-            for (let i = 0; i < 20; i++) { 
+            for (let i = 0; i < 30; i++) { // 增加迭代次數以確保平衡
                 const currentCounts = getShiftCounts(currentSchedule, nurses);
                 const eNurses = nurses.filter(n => availableShifts['E']?.includes(n));
-                const nNurses = nurses.filter(n => availableShifts['N']?.includes(n) && !eNurses.includes(n));
+                const nNurses = nurses.filter(n => availableShifts['N']?.includes(n)); // ✅ 修正：正確定義大夜班護理師
 
                 if (eNurses.length === 0 || nNurses.length === 0) break;
 
@@ -123,24 +123,27 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                 const recipient = sortedNByOff[0]; // 休假最少的 N 班
 
                 // **只要休假天數差異大於 1，就嘗試交換**
-                if (currentCounts[donor].off > currentCounts[recipient].off + 1) {
+                if (donor && recipient && currentCounts[donor].off > currentCounts[recipient].off + 1) {
                     let swapped = false;
                     for (let day = 0; day < daysInMonth; day++) {
-                        // 尋找一個可以交換的機會點
+                        // 尋找一個可以交換的機會點: E班人員OFF, N班人員上N班
                         if (
-                            currentSchedule[donor][day] === 'OFF' && // 捐贈者當天是 OFF
-                            currentSchedule[recipient][day] === 'N' && // 接受者當天是 N
-                            availableShifts['N']?.includes(donor) && // 捐贈者可以上 N 班
-                            // 檢查捐贈者交換後的班別銜接是否合法
-                            (day + 1 >= daysInMonth || !['E'].includes(currentSchedule[donor][day + 1])) &&
-                            (day === 0 || !['E'].includes(currentSchedule[donor][day - 1])) &&
-                            checkConsecutive(currentSchedule, donor, day)
+                            currentSchedule[donor][day] === 'OFF' && 
+                            currentSchedule[recipient][day] === 'N'
                         ) {
-                            // 執行交換
-                            currentSchedule[donor][day] = 'N';
-                            currentSchedule[recipient][day] = 'OFF';
-                            swapped = true;
-                            break; // 完成一次交換，進入下一輪迭代
+                            // 檢查捐贈者(E班)交換後是否合法
+                            const isDonorConsecutiveOK = checkConsecutive(currentSchedule, donor, day);
+                            // 檢查班別銜接，N班前後不能接E班
+                            const isDonorShiftSequenceOK = (day + 1 >= daysInMonth || currentSchedule[donor][day + 1] !== 'E') &&
+                                                         (day === 0 || currentSchedule[donor][day - 1] !== 'E');
+
+                            if (isDonorConsecutiveOK && isDonorShiftSequenceOK) {
+                                // 執行交換
+                                currentSchedule[donor][day] = 'N';
+                                currentSchedule[recipient][day] = 'OFF';
+                                swapped = true;
+                                break; // 完成一次交換，進入下一輪迭代
+                            }
                         }
                     }
                     if (!swapped) break; // 如果找不到任何可交換的機會，就結束優化
