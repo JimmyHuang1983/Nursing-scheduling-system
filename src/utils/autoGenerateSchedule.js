@@ -58,15 +58,13 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         for (let day = 0; day < daysInMonth; day++) {
             const shiftsInOrder = ['Fn', 'N', 'E', 'D'];
             for (const shift of shiftsInOrder) {
-                // ✅ 修正點：移除 Fn 班只能在週間排的硬性限制
-                // if (shift === 'Fn' && !isWeekday(day)) continue; // <--- 移除此行
                 const required = params[shift];
                 let assignedCount = nurses.filter(n => currentSchedule[n][day] === shift).length;
                 
                 const shiftCounts = getShiftCounts(currentSchedule, shuffledNurses);
                 const candidates = shuffledNurses
                     .filter(n => currentSchedule[n][day] === '' && availableShifts[shift]?.includes(n) && checkConsecutive(currentSchedule, n, day))
-                    .sort((a, b) => shiftCounts[a].work - shiftCounts[b].work); // 優先選擇上班最少的人
+                    .sort((a, b) => shiftCounts[a].work - shiftCounts[b].work);
 
                 for(const candidate of candidates) {
                     if (assignedCount >= required) break;
@@ -108,33 +106,48 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
         
-        // 步驟 6: **夜班人力互相支援
+        // ✅ 步驟 6: **夜班人力互相支援 (邏輯增強)**
         if (mutualSupport) {
-            for (let day = 0; day < daysInMonth; day++) {
-                let currentNCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
-                
-                while (currentNCount < params.N) {
-                    const finalCounts = getShiftCounts(currentSchedule, nurses);
+            for (let i = 0; i < 5; i++) { // 進行多次平衡迭代
+                let changed = false;
+                for (let day = 0; day < daysInMonth; day++) {
+                    const currentNCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
                     
-                    const candidates = shuffledNurses
-                        .filter(nurse => 
-                            availableShifts['E']?.includes(nurse) &&
-                            currentSchedule[nurse][day] === 'OFF' &&
-                            finalCounts[nurse].off > minOff &&
-                            (day + 1 >= daysInMonth || currentSchedule[nurse][day + 1] !== 'E') &&
-                            (day === 0 || currentSchedule[nurse][day - 1] !== 'E') &&
-                            checkConsecutive(currentSchedule, nurse, day)
-                        )
-                        .sort((a, b) => finalCounts[b].off - finalCounts[a].off);
+                    if (currentNCount < params.N) {
+                        const finalCounts = getShiftCounts(currentSchedule, nurses);
+                        
+                        const candidates = shuffledNurses
+                            .filter(nurse => 
+                                availableShifts['E']?.includes(nurse) &&
+                                currentSchedule[nurse][day] === 'OFF' &&
+                                finalCounts[nurse].off > minOff &&
+                                (day + 1 >= daysInMonth || !['E'].includes(currentSchedule[nurse][day + 1])) &&
+                                (day === 0 || !['E'].includes(currentSchedule[nurse][day - 1]))
+                            )
+                            .sort((a, b) => finalCounts[b].off - finalCounts[a].off);
 
-                    if (candidates.length > 0) {
-                        const supportNurse = candidates[0];
-                        currentSchedule[supportNurse][day] = 'N';
-                        currentNCount++;
-                    } else {
-                        break;
+                        if (candidates.length > 0) {
+                            const supportNurse = candidates[0];
+                            currentSchedule[supportNurse][day] = 'N';
+                            changed = true;
+
+                            // **回填 E 班人力**
+                            const eCounts = getShiftCounts(currentSchedule, nurses);
+                            const backfillCandidates = shuffledNurses
+                                .filter(n => 
+                                    availableShifts['E']?.includes(n) &&
+                                    currentSchedule[n][day] === 'OFF' &&
+                                    n !== supportNurse
+                                )
+                                .sort((a,b) => eCounts[a].work - eCounts[b].work);
+                            
+                            if (backfillCandidates.length > 0) {
+                                currentSchedule[backfillCandidates[0]][day] = 'E';
+                            }
+                        }
                     }
                 }
+                 if (!changed) break; // 如果一輪下來沒有任何改變，就提前結束
             }
         }
         
@@ -172,7 +185,6 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         let shortage = 0;
         for (let day = 0; day < daysInMonth; day++) {
             for (const shift of ['D', 'E', 'N', 'Fn']) {
-                // if (shift === 'Fn' && !isWeekday(day)) continue; // <-- 移除此行
                 const required = params[shift];
                 const actual = nurses.filter(n => currentSchedule[n][day] === shift).length;
                 if (actual < required) shortage += (required - actual);
