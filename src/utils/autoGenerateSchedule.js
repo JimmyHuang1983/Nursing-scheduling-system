@@ -148,44 +148,46 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
 
                 if (eNurses.length === 0 || nNurses.length === 0) break;
 
-                const sortedEByOff = eNurses.sort((a, b) => currentCounts[b].off - currentCounts[a].off);
-                const sortedNByOff = nNurses.sort((a, b) => currentCounts[a].off - currentCounts[b].off);
+                let swapped = false;
 
-                const donor = sortedEByOff[0]; // 休假最多的 E 班
-                const recipient = sortedNByOff[0]; // 休假最少的 N 班
-
-                // **只要休假天數差異大於 1，就嘗試交換**
-                if (donor && recipient && currentCounts[donor].off > currentCounts[recipient].off + 1) {
-                    let swapped = false;
-                    for (let day = 0; day < daysInMonth; day++) {
-                        // 尋找一個可以交換的機會點: E班人員OFF, N班人員上N班
-                        if (
-                            currentSchedule[donor][day] === 'OFF' && 
-                            currentSchedule[recipient][day] === 'N'
-                        ) {
-                            // 模擬交換後的班表，以進行合法性檢查
-                            const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
-                            tempSchedule[donor][day] = 'N';
-                            tempSchedule[recipient][day] = 'OFF';
-                            
-                            // 檢查捐贈者(E班)交換後是否合法
-                            if (
-                                checkConsecutive(tempSchedule, donor, day) &&
-                                isShiftSequenceValid(tempSchedule, donor, day, 'N') &&
-                                isShiftSequenceValid(tempSchedule, recipient, day, 'OFF')
-                            ) {
-                                // 執行交換
-                                currentSchedule[donor][day] = 'N';
-                                currentSchedule[recipient][day] = 'OFF';
-                                swapped = true;
-                                break; // 完成一次交換，進入下一輪迭代
+                // 全面搜索所有 E 班和 N 班的組合
+                for (const donor of eNurses.sort((a, b) => currentCounts[b].off - currentCounts[a].off)) { // 從休最多的E開始
+                    for (const recipient of nNurses.sort((a, b) => currentCounts[a].off - currentCounts[b].off)) { // 從休最少的N開始
+                        
+                        // **只要休假天數差異大於 1，就嘗試交換**
+                        if (currentCounts[donor].off > currentCounts[recipient].off + 1) {
+                            for (let day = 0; day < daysInMonth; day++) {
+                                // 尋找一個可以交換的機會點: E班人員OFF, N班人員上N班
+                                if (
+                                    currentSchedule[donor][day] === 'OFF' && 
+                                    currentSchedule[recipient][day] === 'N'
+                                ) {
+                                    // 模擬交換後的班表，以進行合法性檢查
+                                    const tempSchedule = JSON.parse(JSON.stringify(currentSchedule));
+                                    tempSchedule[donor][day] = 'N';
+                                    tempSchedule[recipient][day] = 'OFF';
+                                    
+                                    // 檢查捐贈者(E班)交換後是否合法
+                                    if (
+                                        checkConsecutive(tempSchedule, donor, day) &&
+                                        isShiftSequenceValid(tempSchedule, donor, day, 'N') &&
+                                        isShiftSequenceValid(tempSchedule, recipient, day, 'OFF')
+                                    ) {
+                                        // 執行交換
+                                        currentSchedule[donor][day] = 'N';
+                                        currentSchedule[recipient][day] = 'OFF';
+                                        swapped = true;
+                                        break; // 完成一次交換，跳出 day 迴圈
+                                    }
+                                }
                             }
                         }
+                        if (swapped) break; // 跳出 recipient 迴圈
                     }
-                    if (!swapped) break; // 如果找不到任何可交換的機會，就結束優化
-                } else {
-                    break; // 休假已平衡
+                    if (swapped) break; // 跳出 donor 迴圈
                 }
+
+                if (!swapped) break; // 如果這一整輪都沒有發生任何交換，提前結束
             }
         }
         
