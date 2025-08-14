@@ -67,7 +67,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
             const prevShift = i > 0 ? schedule[nurse][i - 1] : null;
             const isInvalidSequence = 
                 (prevShift === 'N' && (s === 'D' || s === 'E')) ||
-                (prevShift === 'E' (s === 'D' || s === 'N'));
+                (prevShift === 'E' && (s === 'D' || s === 'N'));
 
             // 組合 CSS class
             let cellClassName = '';
