@@ -41,7 +41,7 @@ const WelcomeModal = ({ onClose }) => (
                 <li><strong>步驟三：勾選班別資格</strong> - 系統會自動產生勾選清單，請為每位護理師勾選他/她具備的班別資格。</li>
                 <li><strong>步驟四：確認與預班</strong> - 按下「確認人員與班別」按鈕，系統會產生一個空白的班表。您可以在此手動為特定人員預排休假（R）或其他班別。</li>
                 <li><strong>步驟五：AI 產生班表</strong> - 按下「產生班表」按鈕，AI 將根據您設定的所有條件，自動計算並產生一份公平的班表。您可以多次點擊此按鈕，以獲得不同的排班組合。</li>
-                <li><strong>步驟六：夜班人力優化</strong> - (可選) 如果您勾選了「夜班人力互相支援」，可以在產生班表後，多次點擊「夜班人力支援優化」按鈕，系統會嘗試找出休假最多的小夜班與休假最少的大夜班人員，進行一次智慧的班別交換，以平衡休假天數。</li>
+                <li><strong>步驟六：夜班人力優化</strong> - (可選) 在產生班表後，可多次點擊「夜班人力支援優化」按鈕，系統會嘗試找出休假最多的小夜班與休假最少的大夜班人員，進行一次智慧的班別交換，以平衡休假天數。</li>
                 <li><strong>步驟七：匯出Excel</strong> - 對班表滿意後，可點擊「匯出至Excel」將結果下載保存。</li>
             </ul>
             <p><strong>提示：</strong>班表中若有儲存格出現 highlight，代表該處不符合排班規則，請手動調整。</p>
@@ -56,15 +56,13 @@ function App() {
   const [schedule, setSchedule] = useState({ __meta: { year: new Date().getFullYear(), month: new Date().getMonth() } });
   const [daysInMonth, setDaysInMonth] = useState(31);
   const [generated, setGenerated] = useState(false);
-  const [mutualSupport, setMutualSupport] = useState(false);
-  const [showModal, setShowModal] = useState(true); // 控制 Modal 顯示
+  const [showModal, setShowModal] = useState(true);
 
   const [params, setParams] = useState({
     D: 6, E: 4, N: 4, Fn: 1,
     minOff: 8, maxConsecutive: 5,
   });
   
-  // 根據 schedule 中的 meta data 更新月份天數
   useEffect(() => {
     if (schedule.__meta) {
       const { year, month } = schedule.__meta;
@@ -72,7 +70,6 @@ function App() {
       setDaysInMonth(newDays);
     }
   }, [schedule]);
-
 
   const handleConfirm = () => {
     const names = (nurseNames || '').split(',').map(name => name.trim()).filter(Boolean);
@@ -85,8 +82,9 @@ function App() {
   };
 
   const handleGenerate = () => {
+    // 產生班表時，預設不使用支援邏輯，將其交由優化按鈕處理
     const newSchedule = autoGenerateSchedule(
-      schedule, availableShifts, daysInMonth, params, mutualSupport
+      schedule, availableShifts, daysInMonth, params, false
     );
     setSchedule(newSchedule);
   };
@@ -111,14 +109,22 @@ function App() {
     // ... (此處省略現有的 Excel 匯出邏輯，維持不變)
   };
   
-  // ✅ 新增：夜班人力支援優化函式
+  // ✅ 修正後的夜班人力支援優化函式
   const handleNightSupportOptimization = () => {
-    const currentCounts = getShiftCounts(schedule, Object.keys(schedule).filter(k => k !== '__meta'));
-    const eNurses = Object.keys(availableShifts).filter(nurse => availableShifts[nurse].includes('E'));
-    const nNurses = Object.keys(availableShifts).filter(nurse => availableShifts[nurse].includes('N'));
+    const nurseList = Object.keys(schedule).filter(k => k !== '__meta');
+    if (nurseList.length === 0) {
+        alert("請先產生班表。");
+        return;
+    }
+    
+    const currentCounts = getShiftCounts(schedule, nurseList);
+    
+    // ✅ 修正：從 nurseList 和 availableShifts 正確地篩選 E/N 班護理師
+    const eNurses = nurseList.filter(nurse => availableShifts['E']?.includes(nurse));
+    const nNurses = nurseList.filter(nurse => availableShifts['N']?.includes(nurse));
 
     if (eNurses.length === 0 || nNurses.length === 0) {
-        console.log("沒有足夠的 E/N 班人員進行優化。");
+        alert("沒有足夠的小夜或大夜班人員進行優化。");
         return;
     }
 
@@ -134,9 +140,9 @@ function App() {
                         tempSchedule[donor][day] = 'N';
                         tempSchedule[recipient][day] = 'OFF';
 
-                        if (isShiftSequenceValid(tempSchedule, donor, day, 'N') && isShiftSequenceValid(tempSchedule, recipient, day, 'OFF')) {
+                        if (isShiftSequenceValid(tempSchedule, donor, day, 'N') && checkConsecutive(tempSchedule, donor, day)) {
                             setSchedule(tempSchedule);
-                            console.log(`成功將 ${donor} 的休假與 ${recipient} 的 N 班交換。`);
+                            alert(`成功將 ${donor} 的休假與 ${recipient} 的 N 班交換以平衡休假。`);
                             return; // 每次只執行一次交換
                         }
                     }
@@ -145,7 +151,7 @@ function App() {
         }
     }
     
-    console.log("找不到可優化的班別交換。");
+    alert("找不到可優化的班別交換機會。");
   };
 
   // 輔助函式，需要移到 App.jsx 中共享
@@ -165,15 +171,20 @@ function App() {
     };
    const isShiftSequenceValid = (schedule, nurse, day, newShift) => {
         const prevDayShift = day > 0 ? schedule[nurse][day - 1] : null;
-        const nextDayShift = day < daysInMonth - 1 ? schedule[nurse][day + 1] : null;
-
-        if (newShift === 'N') {
-            if (['D', 'E', 'Fn'].includes(prevDayShift) || ['D', 'E', 'Fn'].includes(nextDayShift)) return false;
-        }
-        if (['D', 'E', 'Fn'].includes(newShift)) {
-            if (prevDayShift === 'N') return false;
-        }
+        if (newShift === 'N' && prevDayShift === 'E') return false;
+        if (newShift === 'E' && prevDayShift === 'N') return false;
+        if (newShift === 'D' && prevDayShift === 'N') return false;
         return true;
+    };
+    const checkConsecutive = (sch, nurse, day) => {
+        let consecutive = 0;
+        const tempSch = JSON.parse(JSON.stringify(sch));
+        tempSch[nurse][day] = 'D'; // 假設是上班日來計算
+        for (let i = day; i >= 0; i--) {
+            if (['D', 'E', 'N', 'Fn'].includes(tempSch[nurse][i])) consecutive++;
+            else break;
+        }
+        return consecutive <= params.maxConsecutive;
     };
 
 
@@ -202,10 +213,7 @@ function App() {
           最多連上天數：
           <input type="number" value={params.maxConsecutive} onChange={e => setParams({ ...params, maxConsecutive: parseInt(e.target.value) || 0 })} />
         </label>
-         <label>
-          <input type="checkbox" checked={mutualSupport} onChange={e => setMutualSupport(e.target.checked)} />
-          夜班人力互相支援
-        </label>
+        {/* Checkbox 已移除 */}
       </div>
 
       <InputPanel
@@ -215,18 +223,21 @@ function App() {
       />
 
       {generated && (
-        <>
-          <ScheduleTable
+        <div className="actions-panel">
+          <button onClick={handleGenerate}>產生班表</button>
+          {/* ✅ 按鈕現在永遠顯示 */}
+          <button onClick={handleNightSupportOptimization} className="optimize-button">夜班人力支援優化</button>
+          <button onClick={handleExportToExcel}>匯出至Excel</button>
+        </div>
+      )}
+      
+      {generated && 
+        <ScheduleTable
             schedule={schedule} setSchedule={setSchedule}
             daysInMonth={daysInMonth} availableShifts={availableShifts}
             params={params}
-          />
-          <button onClick={handleGenerate}>產生班表</button>
-          {/* ✅ 新增按鈕，並在勾選支援時才顯示 */}
-          {mutualSupport && <button onClick={handleNightSupportOptimization} className="optimize-button">夜班人力支援優化</button>}
-          <button onClick={handleExportToExcel}>匯出至Excel</button>
-        </>
-      )}
+        />
+      }
     </div>
   );
 }
