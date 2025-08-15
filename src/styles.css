@@ -41,9 +41,10 @@ input, textarea, select {
 }
 
 /* 按鈕樣式 */
-button, .demo-button {
+/* 基礎按鈕樣式，所有按鈕共用 */
+button, .demo-button, .optimize-button {
   border-radius: 8px;
-  border: 1px solid #6c757d; /* 灰色邊框 */
+  border: 1px solid transparent;
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
@@ -51,23 +52,30 @@ button, .demo-button {
   cursor: pointer;
   transition: all 0.25s;
   margin: 5px;
-  background-color: #f8f9fa; /* 淡灰色背景 */
-  color: #212529; /* 深色文字 */
+  color: white; /* 預設文字為白色，因為背景都有顏色 */
 }
-button:hover, .demo-button:hover {
-  background-color: #e2e6ea;
-  border-color: #5a6268;
+button:hover, .demo-button:hover, .optimize-button:hover {
+  filter: brightness(0.9); /* 滑鼠懸停時變暗 */
 }
 
+/* 一般按鈕 (藍色) */
+button {
+  background-color: #007bff;
+  border-color: #007bff;
+}
+
+/* DEMO 按鈕 (綠色) */
 .demo-button {
   background-color: #28a745;
-  color: white;
   border-color: #28a745;
 }
-.demo-button:hover {
-  background-color: #218838;
-  border-color: #1e7e34;
+
+/* 優化按鈕 (紫色) */
+.optimize-button {
+    background-color: #6f42c1;
+    border-color: #6f42c1;
 }
+
 
 /* --- 表格樣式 --- */
 .schedule-table {
@@ -145,7 +153,6 @@ button:hover, .demo-button:hover {
   background-color: #ffcdd2 !important;
 }
 
-/* 不合理班別銜接的樣式 */
 .invalid-sequence-cell,
 .invalid-sequence-cell select {
     background-color: #FFCC80 !important; /* 醒目的橘色 */
