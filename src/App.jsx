@@ -4,30 +4,6 @@ import ScheduleTable from './components/ScheduleTable';
 import autoGenerateSchedule from './utils/autoGenerateSchedule';
 import './styles.css';
 
-// 輔助函式：找出連續上班超時的區間 (從 ScheduleTable.jsx 移至此處共享)
-const getOverlappingRanges = (shifts, maxConsecutive) => {
-    const ranges = [];
-    let currentRangeStart = -1;
-    let consecutiveCount = 0;
-    (shifts || []).forEach((shift, index) => {
-        if (['D', 'E', 'N', 'Fn'].includes(shift)) {
-            if (currentRangeStart === -1) currentRangeStart = index;
-            consecutiveCount++;
-        } else {
-            if (consecutiveCount > maxConsecutive) {
-                ranges.push({ start: currentRangeStart, end: index - 1 });
-            }
-            currentRangeStart = -1;
-            consecutiveCount = 0;
-        }
-    });
-    if (consecutiveCount > maxConsecutive) {
-        ranges.push({ start: currentRangeStart, end: (shifts || []).length - 1 });
-    }
-    return ranges;
-};
-
-
 // Welcome Modal Component
 const WelcomeModal = ({ onClose }) => (
     <div className="modal-overlay">
@@ -82,9 +58,8 @@ function App() {
   };
 
   const handleGenerate = () => {
-    // 產生班表時，預設不使用支援邏輯，將其交由優化按鈕處理
     const newSchedule = autoGenerateSchedule(
-      schedule, availableShifts, daysInMonth, params, false
+      schedule, availableShifts, daysInMonth, params, false // 初始排班不啟用支援
     );
     setSchedule(newSchedule);
   };
@@ -109,52 +84,7 @@ function App() {
     // ... (此處省略現有的 Excel 匯出邏輯，維持不變)
   };
   
-  // ✅ 修正後的夜班人力支援優化函式
-  const handleNightSupportOptimization = () => {
-    const nurseList = Object.keys(schedule).filter(k => k !== '__meta');
-    if (nurseList.length === 0) {
-        alert("請先產生班表。");
-        return;
-    }
-    
-    const currentCounts = getShiftCounts(schedule, nurseList);
-    
-    // ✅ 修正：從 nurseList 和 availableShifts 正確地篩選 E/N 班護理師
-    const eNurses = nurseList.filter(nurse => availableShifts['E']?.includes(nurse));
-    const nNurses = nurseList.filter(nurse => availableShifts['N']?.includes(nurse));
-
-    if (eNurses.length === 0 || nNurses.length === 0) {
-        alert("沒有足夠的小夜或大夜班人員進行優化。");
-        return;
-    }
-
-    const sortedEByOff = eNurses.sort((a, b) => (currentCounts[b]?.off || 0) - (currentCounts[a]?.off || 0));
-    const sortedNByOff = nNurses.sort((a, b) => (currentCounts[a]?.off || 0) - (currentCounts[b]?.off || 0));
-
-    for (const donor of sortedEByOff) {
-        for (const recipient of sortedNByOff) {
-            if ((currentCounts[donor]?.off || 0) > (currentCounts[recipient]?.off || 0) + 1) {
-                for (let day = 0; day < daysInMonth; day++) {
-                    if (schedule[donor]?.[day] === 'OFF' && schedule[recipient]?.[day] === 'N') {
-                        const tempSchedule = JSON.parse(JSON.stringify(schedule));
-                        tempSchedule[donor][day] = 'N';
-                        tempSchedule[recipient][day] = 'OFF';
-
-                        if (isShiftSequenceValid(tempSchedule, donor, day, 'N') && checkConsecutive(tempSchedule, donor, day)) {
-                            setSchedule(tempSchedule);
-                            alert(`成功將 ${donor} 的休假與 ${recipient} 的 N 班交換以平衡休假。`);
-                            return; // 每次只執行一次交換
-                        }
-                    }
-                }
-            }
-        }
-    }
-    
-    alert("找不到可優化的班別交換機會。");
-  };
-
-  // 輔助函式，需要移到 App.jsx 中共享
+  // --- 輔助函式 ---
   const getShiftCounts = (sch, nurseList) => {
         const counts = {};
         nurseList.forEach(nurse => {
@@ -169,24 +99,142 @@ function App() {
         });
         return counts;
     };
+
    const isShiftSequenceValid = (schedule, nurse, day, newShift) => {
-        const prevDayShift = day > 0 ? schedule[nurse][day - 1] : null;
-        if (newShift === 'N' && prevDayShift === 'E') return false;
-        if (newShift === 'E' && prevDayShift === 'N') return false;
-        if (newShift === 'D' && prevDayShift === 'N') return false;
+        // 如果新班別是休假，則永遠合法
+        if (['OFF', 'R', '公', ''].includes(newShift)) return true;
+
+        // 檢查 前一天 -> 當天
+        if (day > 0) {
+            const prevShift = schedule[nurse][day - 1];
+            if (prevShift === 'N' && (newShift === 'D' || newShift === 'E')) return false;
+            if (prevShift === 'E' && newShift === 'D') return false;
+        }
+
+        // 檢查 當天 -> 後一天
+        if (day < daysInMonth - 1) {
+            const nextShift = schedule[nurse][day + 1];
+            if (newShift === 'N' && (nextShift === 'D' || nextShift === 'E')) return false;
+            if (newShift === 'E' && nextShift === 'D') return false;
+        }
+        
         return true;
-    };
-    const checkConsecutive = (sch, nurse, day) => {
-        let consecutive = 0;
+   };
+
+    const checkConsecutive = (sch, nurse, day, newShift) => {
         const tempSch = JSON.parse(JSON.stringify(sch));
-        tempSch[nurse][day] = 'D'; // 假設是上班日來計算
+        tempSch[nurse][day] = newShift;
+
+        let consecutive = 0;
+        // 從當天往前計算
         for (let i = day; i >= 0; i--) {
             if (['D', 'E', 'N', 'Fn'].includes(tempSch[nurse][i])) consecutive++;
             else break;
         }
-        return consecutive <= params.maxConsecutive;
+        // 從當天往後計算 (但不重複計算當天)
+         for (let i = day + 1; i < daysInMonth; i++) {
+            if (['D', 'E', 'N', 'Fn'].includes(tempSch[nurse][i])) consecutive++;
+            else break;
+        }
+        // 修正：上面的算法會重複計算，以下為正確算法
+        let currentConsecutive = 0;
+        for (let i = day; i >= 0; i--) {
+             if (['D', 'E', 'N', 'Fn'].includes(tempSch[nurse][i])) currentConsecutive++;
+             else break;
+        }
+         for (let i = day + 1; i < daysInMonth; i++) {
+            if (['D', 'E', 'N', 'Fn'].includes(tempSch[nurse][i])) currentConsecutive++;
+            else break;
+        }
+
+        return currentConsecutive <= params.maxConsecutive;
     };
 
+
+  // ✅ 全新、更智慧的夜班人力支援優化函式
+  const handleNightSupportOptimization = () => {
+    const nurseList = Object.keys(schedule).filter(k => k !== '__meta');
+    if (nurseList.length === 0) {
+        alert("請先產生班表。");
+        return;
+    }
+    
+    const currentCounts = getShiftCounts(schedule, nurseList);
+    const eNurses = nurseList.filter(nurse => availableShifts['E']?.includes(nurse));
+    const nNurses = nurseList.filter(nurse => availableShifts['N']?.includes(nurse));
+
+    if (eNurses.length < 2 || nNurses.length === 0) {
+        alert("沒有足夠的小夜或大夜班人員進行優化（至少需要2位小夜班人員）。");
+        return;
+    }
+    
+    // 1. 找到休假最多(超休)的E班人員 (捐贈者)
+    const donors = eNurses
+        .filter(n => (currentCounts[n]?.off || 0) > params.minOff)
+        .sort((a, b) => (currentCounts[b]?.off || 0) - (currentCounts[a]?.off || 0));
+
+    // 2. 找到休假最少的N班人員 (接受者)
+    const recipients = nNurses
+        .sort((a, b) => (currentCounts[a]?.off || 0) - (currentCounts[b]?.off || 0));
+
+    if (donors.length === 0 || recipients.length === 0) {
+        alert("找不到休假天數符合交換條件的小夜或大夜班人員。");
+        return;
+    }
+
+    const recipient = recipients[0]; // 最需要休假的大夜
+
+    // 遍歷所有可能的捐贈者和日期，尋找一個可行的三方交換
+    for (const donor of donors) {
+        // 確保捐贈者比接受者多休至少一天
+        if ((currentCounts[donor]?.off || 0) <= (currentCounts[recipient]?.off || 0)) continue;
+
+        for (let day = 0; day < daysInMonth; day++) {
+            // 條件 A: 捐贈者當天是 OFF
+            if (schedule[donor]?.[day] === 'OFF') {
+                
+                // 模擬步驟1：捐贈者 OFF -> E
+                const tempSchedule1 = JSON.parse(JSON.stringify(schedule));
+                tempSchedule1[donor][day] = 'E';
+
+                // 檢查步驟1的合法性 (連續上班 & 班別銜接)
+                if (!checkConsecutive(tempSchedule1, donor, day, 'E') || !isShiftSequenceValid(tempSchedule1, donor, day, 'E')) continue;
+
+                // 條件 B: 找到另一位 E 班人員 (中介者)，他當天是 E 班且隔天是 OFF
+                const intermediaries = eNurses.filter(n => 
+                    n !== donor && 
+                    schedule[n]?.[day] === 'E' && 
+                    (day + 1 < daysInMonth ? schedule[n]?.[day + 1] === 'OFF' : true)
+                );
+
+                for (const intermediary of intermediaries) {
+                     // 模擬步驟2：中介者 E -> N
+                     const tempSchedule2 = JSON.parse(JSON.stringify(tempSchedule1));
+                     tempSchedule2[intermediary][day] = 'N';
+                     
+                     // 檢查步驟2的合法性 (班別銜接)
+                     if (!isShiftSequenceValid(tempSchedule2, intermediary, day, 'N')) continue;
+                     
+                     // 條件 C: 確保接受者當天是 N 班
+                     if (schedule[recipient]?.[day] === 'N') {
+                         
+                         // 找到了完整的可交換組合！
+                         const finalSchedule = JSON.parse(JSON.stringify(schedule));
+                         finalSchedule[donor][day] = 'E'; // 超休E班人員來上班
+                         finalSchedule[intermediary][day] = 'N'; // 另一位E班人員去支援N班
+                         finalSchedule[recipient][day] = 'OFF'; // 休最少的N班人員去休假
+
+                         setSchedule(finalSchedule);
+                         alert(`優化成功：${donor}上班，${intermediary}支援大夜，${recipient}休假。`);
+                         return; // 每次只執行一次優化
+                     }
+                }
+            }
+        }
+    }
+    
+    alert("找不到可優化的班別交換機會。");
+  };
 
   return (
     <div className="App">
@@ -213,7 +261,6 @@ function App() {
           最多連上天數：
           <input type="number" value={params.maxConsecutive} onChange={e => setParams({ ...params, maxConsecutive: parseInt(e.target.value) || 0 })} />
         </label>
-        {/* Checkbox 已移除 */}
       </div>
 
       <InputPanel
@@ -225,7 +272,6 @@ function App() {
       {generated && (
         <div className="actions-panel">
           <button onClick={handleGenerate}>產生班表</button>
-          {/* ✅ 按鈕現在永遠顯示 */}
           <button onClick={handleNightSupportOptimization} className="optimize-button">夜班人力支援優化</button>
           <button onClick={handleExportToExcel}>匯出至Excel</button>
         </div>
