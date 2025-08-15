@@ -22,7 +22,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                 sch[nurse].forEach(shift => {
                     if (counts[nurse][shift] !== undefined) counts[nurse][shift]++;
                     if (['D', 'E', 'N', 'Fn'].includes(shift)) counts[nurse].work++;
-                    else if (['OFF', 'R'].includes(shift)) counts[nurse].off++;
+                    else if (['OFF', 'R', '公'].includes(shift)) counts[nurse].off++; // 將 '公' 計入休假
                 });
             }
         });
@@ -47,10 +47,13 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         const currentSchedule = JSON.parse(JSON.stringify(schedule));
         const shuffledNurses = [...nurses].sort(() => Math.random() - 0.5);
 
-        // 步驟 1: 清空班表 (保留 'R')
+        // 步驟 1: 清空現有班表 (但保留使用者預先設定的 'R' 和 '公' 假)
         shuffledNurses.forEach(nurse => {
             for (let day = 0; day < daysInMonth; day++) {
-                if (currentSchedule[nurse][day] !== 'R') currentSchedule[nurse][day] = '';
+                // ✅ 核心修正：同時保留 'R' 和 '公'
+                if (!['R', '公'].includes(currentSchedule[nurse][day])) {
+                    currentSchedule[nurse][day] = '';
+                }
             }
         });
 
@@ -58,8 +61,6 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         for (let day = 0; day < daysInMonth; day++) {
             const shiftsInOrder = ['Fn', 'N', 'E', 'D'];
             for (const shift of shiftsInOrder) {
-                // ✅ 修正點：移除 Fn 班只能在週間排的硬性限制
-                // if (shift === 'Fn' && !isWeekday(day)) continue; // <--- 移除此行
                 const required = params[shift];
                 let assignedCount = nurses.filter(n => currentSchedule[n][day] === shift).length;
                 
