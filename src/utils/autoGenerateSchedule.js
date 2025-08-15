@@ -17,12 +17,13 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
     const getShiftCounts = (sch, nurseList) => {
         const counts = {};
         nurseList.forEach(nurse => {
-            counts[nurse] = { D: 0, E: 0, N: 0, Fn: 0, OFF: 0, R: 0, work: 0, off: 0 };
+            // ✅ 修正點：將 '公' 加入計數物件，確保能被正確統計
+            counts[nurse] = { D: 0, E: 0, N: 0, Fn: 0, OFF: 0, R: 0, '公': 0, work: 0, off: 0 };
             if (sch[nurse]) {
                 sch[nurse].forEach(shift => {
                     if (counts[nurse][shift] !== undefined) counts[nurse][shift]++;
                     if (['D', 'E', 'N', 'Fn'].includes(shift)) counts[nurse].work++;
-                    else if (['OFF', 'R', '公'].includes(shift)) counts[nurse].off++; // 將 '公' 計入休假
+                    else if (['OFF', 'R', '公'].includes(shift)) counts[nurse].off++;
                 });
             }
         });
@@ -50,8 +51,9 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
         // 步驟 1: 清空現有班表 (但保留使用者預先設定的 'R' 和 '公' 假)
         shuffledNurses.forEach(nurse => {
             for (let day = 0; day < daysInMonth; day++) {
-                // ✅ 核心修正：同時保留 'R' 和 '公'
-                if (!['R', '公'].includes(currentSchedule[nurse][day])) {
+                const preservedShift = currentSchedule[nurse][day];
+                // ✅ 核心修正：明確檢查 'R' 和 '公'，確保它們不會被清除
+                if (preservedShift !== 'R' && preservedShift !== '公') {
                     currentSchedule[nurse][day] = '';
                 }
             }
