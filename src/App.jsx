@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 // 引入 Firebase 相關服務
-import { auth } from './firebase';
+import { auth, db } from './firebase';
 import { onAuthStateChanged, signOut } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 // 引入我們的所有頁面元件
 import InputPanel from './components/InputPanel';
