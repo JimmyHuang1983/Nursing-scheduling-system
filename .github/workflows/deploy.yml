@@ -1,56 +1,67 @@
-# deploy.yml
+# 工作流程名稱
 name: Deploy React App to GitHub Pages
 
+# 觸發條件：當推送到 main 分支時，或手動觸發時
 on:
   push:
-    branches: [ "main" ] # 當推送到 main 分支時觸發
+    branches: [ "main" ]
   workflow_dispatch:
 
-# 設定工作流程的權限，這是必要步驟
+# 賦予工作流程讀寫 Pages 的權限
 permissions:
   contents: read
   pages: write
   id-token: write
 
+# 定義工作
 jobs:
+  # 第一個工作：建置 (build)
   build:
     runs-on: ubuntu-latest
     steps:
+      # 步驟 1: 取得您的程式碼
       - name: Checkout
         uses: actions/checkout@v4
+      
+      # 步驟 2: 設定 Node.js 環境
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20' # 建議使用 LTS 版本
           cache: 'npm'
+          
+      # 步驟 3: 安裝專案依賴套件
       - name: Install dependencies
         run: npm install
+        
+      # 步驟 4: 執行建置，並注入您的 API 金鑰
       - name: Build
         env:
-          VITE_API_KEY: ${{ secrets.VITE_APIKEY }}
-          VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTHDOMAIN }}
-          VITE_PROJECT_ID: ${{ secrets.VITE_PROJECTID }}
-          VITE_STORAGE_BUCKET: ${{ secrets.VITE_STORAGEBUCKET }}
-          VITE_MESSAGING_SENDER_ID: ${{ secrets.VITE_MESSAGINGSENDERID }}
-          VITE_APP_ID: ${{ secrets.VITE_APPID }}
-          VITE_MEASUREMENT_ID: ${{ secrets.VITE_MEASUREMENTID }}
-        run: npm run build # 這會產生 dist 資料夾
+          VITE_API_KEY: ${{ secrets.VITE_API_KEY }}
+          VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTH_DOMAIN }}
+          VITE_PROJECT_ID: ${{ secrets.VITE_PROJECT_ID }}
+          VITE_STORAGE_BUCKET: ${{ secrets.VITE_STORAGE_BUCKET }}
+          VITE_MESSAGING_SENDER_ID: ${{ secrets.VITE_MESSAGING_SENDER_ID }}
+          VITE_APP_ID: ${{ secrets.VITE_APP_ID }}
+          VITE_MEASUREMENT_ID: ${{ secrets.VITE_MEASUREMENT_ID }}
+        run: npm run build
 
-      # 將建置好的 dist 資料夾打包成 Pages Artifact
+      # 步驟 5: 將建置好的 dist 資料夾打包
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: './dist' # 指向您的建置輸出資料夾
+          path: './dist'
 
+  # 第二個工作：部署 (deploy)
   deploy:
-    # 需要在 build 工作完成後才執行
+    # 必須在 build 工作完成後才執行
     needs: build
     runs-on: ubuntu-latest
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      # 部署到 GitHub Pages
+      # 從打包好的成品部署到 GitHub Pages
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
