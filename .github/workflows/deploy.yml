@@ -26,6 +26,14 @@ jobs:
       - name: Install dependencies
         run: npm install
       - name: Build
+        env:
+          VITE_API_KEY: ${{ secrets.VITE_APIKEY }}
+          VITE_AUTH_DOMAIN: ${{ secrets.VITE_AUTHDOMAIN }}
+          VITE_PROJECT_ID: ${{ secrets.VITE_PROJECTID }}
+          VITE_STORAGE_BUCKET: ${{ secrets.VITE_STORAGEBUCKET }}
+          VITE_MESSAGING_SENDER_ID: ${{ secrets.VITE_MESSAGINGSENDERID }}
+          VITE_APP_ID: ${{ secrets.VITE_APPID }}
+          VITE_MEASUREMENT_ID: ${{ secrets.VITE_MEASUREMENTID }}
         run: npm run build # 這會產生 dist 資料夾
 
       # 將建置好的 dist 資料夾打包成 Pages Artifact
