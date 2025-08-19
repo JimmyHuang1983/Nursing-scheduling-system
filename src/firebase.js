@@ -1,5 +1,7 @@
+// 引入 Firebase 相關模組
 import { initializeApp } from "firebase/app";
 import { getAuth } from "firebase/auth";
+// ✅ 引入 Firestore 模組
 import { getFirestore } from "firebase/firestore";
 
 // 從環境變數中讀取您的 Firebase 專案設定
@@ -16,8 +18,9 @@ const firebaseConfig = {
 // 初始化 Firebase
 const app = initializeApp(firebaseConfig);
 
-// 匯出 Authentication 和 Firestore 服務
+// 匯出 Authentication 服務
 export const auth = getAuth(app);
+// ✅ 匯出 Firestore 資料庫服務
 export const db = getFirestore(app);
 
 

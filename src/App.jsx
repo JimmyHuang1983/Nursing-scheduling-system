@@ -311,7 +311,7 @@ const TrialExpiredPage = ({ user }) => (
     <div style={{ textAlign: 'center', marginTop: '50px', padding: '20px' }}>
         <h1>試用期已結束</h1>
         <p>感謝您的試用！ {user.email}</p>
-        <p>如需繼續使用，請聯繫管理員以開通您的帳號。</p>
+        <p>如需繼續使用，請聯繫管理員(jay198377@gmail.com)以開通您的帳號, 信件主旨 "AI護理排班系統續用申請"。</p>
         <button onClick={() => signOut(auth)} style={{ marginTop: '20px' }}>登出</button>
     </div>
 );
@@ -340,6 +340,8 @@ function App() {
         if (docSnap.exists()) {
           setUserProfile(docSnap.data());
         } else {
+          // ✅ 核心修改：使用 currentUser.displayName 或 currentUser.email 來顯示個人化歡迎訊息
+          alert(`Hi, ${currentUser.displayName || currentUser.email}！歡迎加入！您已獲得一個月的完整功能試用期。`);
           const newProfile = {
             email: currentUser.email,
             role: 'user',
@@ -356,7 +358,6 @@ function App() {
       setLoading(false);
     });
 
-    // ✅ 核心修正：移除依賴項，確保此 effect 只在元件首次載入時執行一次
     return () => unsubscribe();
   }, []);
 
@@ -370,19 +371,18 @@ function App() {
           if (userProfile.role === 'admin') {
               return <NurseScheduleApp user={user} />;
           }
-          if (userProfile.trialStartedAt?.toDate) { // 確保 toDate 方法存在
+          if (userProfile.trialStartedAt?.toDate) { 
               const trialStartDate = userProfile.trialStartedAt.toDate();
-              const trialEndDate = new Date(trialStartDate.getTime() + 5 * 24 * 60 * 60 * 1000);
+              // ✅ 核心修改：試用期從 5 天改為 30 天
+              const trialEndDate = new Date(trialStartDate.getTime() + 30 * 24 * 60 * 60 * 1000); 
               if (new Date() < trialEndDate) {
                   return <NurseScheduleApp user={user} />;
               } else {
                   return <TrialExpiredPage user={user} />;
               }
           }
-          // 如果 trialStartedAt 正在等待 serverTimestamp，顯示 loading
           return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>正在驗證使用者權限...</div>;
       } else if(user && !userProfile) {
-          // 在 userProfile 正在非同步載入時，顯示一個 loading 狀態
           return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>正在讀取使用者資料...</div>;
       }
       else {
