@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 // 引入 Firebase 相關服務
 import { auth, db } from './firebase';
-import { onAuthStateChanged, signOut } from "firebase/auth";
+import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth";
 import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
 
 // 引入我們的所有頁面元件
@@ -311,7 +311,7 @@ const TrialExpiredPage = ({ user }) => (
     <div style={{ textAlign: 'center', marginTop: '50px', padding: '20px' }}>
         <h1>試用期已結束</h1>
         <p>感謝您的試用！ {user.email}</p>
-        <p>如需繼續使用，請聯繫管理員以開通您的帳號。</p>
+        <p>如需繼續使用，請聯繫管理員(jay198377@gmail.com)以開通您的帳號, 信件主旨 "AI護理排班系統續用申請"。</p>
         <button onClick={() => signOut(auth)} style={{ marginTop: '20px' }}>登出</button>
     </div>
 );
@@ -322,60 +322,35 @@ function App() {
   const [user, setUser] = useState(null);
   const [userProfile, setUserProfile] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [debugMessage, setDebugMessage] = useState("正在初始化...");
 
   useEffect(() => {
-    console.log("【偵錯】: App.jsx 的 useEffect 正在執行...");
-    setDebugMessage("正在設定 Firebase 監聽器...");
+    // 處理從 Google 跳轉回來的結果
+    getRedirectResult(auth)
+      .catch((error) => {
+        console.error("Redirect Result 處理失敗", error);
+      });
 
+    // 監聽登入狀態的變化
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      console.log("【偵錯】: onAuthStateChanged 已觸發，currentUser:", currentUser);
-      setDebugMessage("使用者狀態已改變...");
-
       setUser(currentUser);
       
-      if (currentUser) {
-        console.log("【偵錯】: 使用者已登入，UID:", currentUser.uid);
-        setDebugMessage(`使用者已登入: ${currentUser.uid}`);
-        
-        try {
-          const userRef = doc(db, "users", currentUser.uid);
-          console.log("【偵錯】: 已建立 Firestore 文件參考:", userRef.path);
-          setDebugMessage("正在準備讀取資料庫...");
-
-          const docSnap = await getDoc(userRef);
-          console.log("【偵錯】: getDoc 已完成，文件是否存在:", docSnap.exists());
-          setDebugMessage(`資料庫文件是否存在: ${docSnap.exists()}`);
-
-          if (docSnap.exists()) {
-            console.log("【偵錯】: 文件已存在，個人資料:", docSnap.data());
-            setDebugMessage("使用者資料已存在，正在讀取...");
-            setUserProfile(docSnap.data());
-          } else {
-            console.log("【偵錯】: 文件不存在，準備建立新的個人資料...");
-            setDebugMessage("使用者資料不存在，正在建立新資料...");
-            const newProfile = {
-              email: currentUser.email,
-              role: 'user',
-              trialStartedAt: serverTimestamp(),
-            };
-            
-            console.log("【偵錯】: 準備呼叫 setDoc，資料為:", newProfile);
-            await setDoc(userRef, newProfile);
-            console.log("【偵錯】: setDoc 已成功執行！");
-            setDebugMessage("新資料已成功寫入！正在重新讀取...");
-
-            const newDocSnap = await getDoc(userRef);
-            setUserProfile(newDocSnap.data());
-          }
-        } catch (error) {
-            console.error("!!!!!!!!!! Firestore 操作失敗 !!!!!!!!!!", error);
-            setDebugMessage(`資料庫操作失敗: ${error.message}`);
+      if (currentUser) { 
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+          setUserProfile(docSnap.data());
+        } else {
+          alert(`Hi, ${currentUser.displayName || currentUser.email}！歡迎加入！您已獲得一個月的完整功能試用期。`);
+          const newProfile = {
+            email: currentUser.email,
+            role: 'user',
+            trialStartedAt: serverTimestamp(),
+          };
+          await setDoc(userRef, newProfile);
+          const newDocSnap = await getDoc(userRef);
+          setUserProfile(newDocSnap.data());
         }
-
       } else {
-        console.log("【偵錯】: 使用者已登出。");
-        setDebugMessage("使用者已登出。");
         setUserProfile(null);
       }
       
@@ -395,29 +370,26 @@ function App() {
           if (userProfile.role === 'admin') {
               return <NurseScheduleApp user={user} />;
           }
-
-          if (userProfile.trialStartedAt) {
+          if (userProfile.trialStartedAt?.toDate) { 
               const trialStartDate = userProfile.trialStartedAt.toDate();
-              const trialEndDate = new Date(trialStartDate.getTime() + 5 * 24 * 60 * 60 * 1000);
-
+              const trialEndDate = new Date(trialStartDate.getTime() + 30 * 24 * 60 * 60 * 1000); 
               if (new Date() < trialEndDate) {
                   return <NurseScheduleApp user={user} />;
               } else {
                   return <TrialExpiredPage user={user} />;
               }
           }
-          return <TrialExpiredPage user={user} />;
-          
-      } else {
+          return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>正在驗證使用者權限...</div>;
+      } else if(user && !userProfile) {
+          return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>正在讀取使用者資料...</div>;
+      }
+      else {
           return <AuthPage />;
       }
   };
 
   return (
     <div className="App">
-      <div style={{ position: 'fixed', bottom: '10px', left: '10px', backgroundColor: 'rgba(0,0,0,0.7)', color: 'white', padding: '5px 10px', borderRadius: '5px', zIndex: 9999 }}>
-          <strong>偵錯訊息:</strong> {debugMessage}
-      </div>
       {renderContent()}
     </div>
   );
