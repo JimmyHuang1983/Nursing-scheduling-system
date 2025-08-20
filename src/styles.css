@@ -24,13 +24,23 @@ h1 {
   text-align: center;
 }
 
-/* 輸入元件樣式 */
+/* 控制項與輸入元件樣式 */
+.controls {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
 .inputs, .input-panel {
   margin-bottom: 20px;
   padding: 15px;
   border: 1px solid #ddd;
   border-radius: 8px;
   background-color: #f9f9f9;
+}
+
+.actions-panel {
+  text-align: center;
+  margin-top: 20px;
 }
 
 input, textarea, select {
@@ -41,8 +51,7 @@ input, textarea, select {
 }
 
 /* 按鈕樣式 */
-/* 基礎按鈕樣式，所有按鈕共用 */
-button, .demo-button, .optimize-button {
+button, .demo-button, .optimize-button, .auto-optimize-button {
   border-radius: 8px;
   border: 1px solid transparent;
   padding: 0.6em 1.2em;
@@ -52,10 +61,10 @@ button, .demo-button, .optimize-button {
   cursor: pointer;
   transition: all 0.25s;
   margin: 5px;
-  color: white; /* 預設文字為白色，因為背景都有顏色 */
+  color: white; /* 預設文字為白色 */
 }
-button:hover, .demo-button:hover, .optimize-button:hover {
-  filter: brightness(0.9); /* 滑鼠懸停時變暗 */
+button:hover, .demo-button:hover, .optimize-button:hover, .auto-optimize-button:hover {
+  filter: brightness(0.9);
 }
 
 /* 一般按鈕 (藍色) */
@@ -70,20 +79,26 @@ button {
   border-color: #28a745;
 }
 
-/* 優化按鈕 (紫色) */
+/* 單次優化按鈕 (紫色) */
 .optimize-button {
     background-color: #6f42c1;
     border-color: #6f42c1;
+}
+
+/* 一鍵優化按鈕 (紅色) */
+.auto-optimize-button {
+    background-color: #dc3545;
+    border-color: #dc3545;
 }
 
 
 /* --- 表格樣式 --- */
 .schedule-table {
   border-collapse: collapse;
-  width: 100%;
+  width: 100%; 
   margin-top: 20px;
   font-size: 13px;
-  table-layout: fixed;
+  table-layout: fixed; 
 }
 
 .schedule-table th, .schedule-table td {
@@ -98,15 +113,11 @@ button {
 }
 
 /* 特別設定姓名和休假欄位的寬度 */
-.schedule-table .nurse-name-header,
-.schedule-table .nurse-name-cell {
+.schedule-table .nurse-name-header {
   width: 90px;
-  min-width: 90px;
 }
-.schedule-table .off-day-header,
-.schedule-table .off-day-cell {
+.schedule-table .off-day-header {
   width: 50px;
-  min-width: 50px;
 }
 
 /* 下拉選單樣式 */
@@ -120,7 +131,7 @@ button {
   padding: 2px;
   font-size: 13px;
   color: #000;
-  text-align: center; /* 讓選項置中 */
+  text-align: center;
 }
 
 /* 總計與間隔行樣式 */
@@ -137,8 +148,8 @@ button {
 
 /* 警示儲存格樣式 */
 .shortage-cell {
-  background-color: #ffcdd2 !important;
-  color: #c62828 !important;
+  background-color: #ffcdd2 !important; 
+  color: #c62828 !important; 
   font-weight: bold;
 }
 
@@ -150,14 +161,13 @@ button {
 
 .over-consecutive-cell,
 .over-consecutive-cell select {
-  background-color: #ffcdd2 !important;
+  background-color: #ffcdd2 !important; 
 }
 
 .invalid-sequence-cell,
 .invalid-sequence-cell select {
     background-color: #FFCC80 !important; /* 醒目的橘色 */
 }
-
 
 /* Modal (彈出視窗) 樣式 */
 .modal-overlay {
