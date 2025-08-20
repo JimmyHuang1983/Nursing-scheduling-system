@@ -1,13 +1,14 @@
 function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params, mutualSupport) {
     // 從傳入的資料中獲取元數據
     const { year, month } = scheduleData.__meta;
-    const schedule = { ...scheduleData };
-    delete schedule.__meta;
+    // ✅ 核心修改：將傳入的 schedule 視為使用者預排的基礎班表
+    const userPrefilledSchedule = JSON.parse(JSON.stringify(scheduleData));
+    delete userPrefilledSchedule.__meta;
 
-    const nurses = Object.keys(schedule);
+    const nurses = Object.keys(userPrefilledSchedule);
     const { minOff, maxConsecutive } = params;
 
-    // --- 輔助函式 ---
+    // --- 輔助函式 (維持不變) ---
     const isWeekday = (day) => {
         const date = new Date(year, month, day + 1);
         const dayOfWeek = date.getDay(); // 0=Sun, 6=Sat
@@ -17,7 +18,6 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
     const getShiftCounts = (sch, nurseList) => {
         const counts = {};
         nurseList.forEach(nurse => {
-            // ✅ 修正點：將 '公' 加入計數物件，確保能被正確統計
             counts[nurse] = { D: 0, E: 0, N: 0, Fn: 0, OFF: 0, R: 0, '公': 0, work: 0, off: 0 };
             if (sch[nurse]) {
                 sch[nurse].forEach(shift => {
@@ -43,21 +43,12 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
     let bestSchedule = {};
     let bestScore = Infinity;
 
-    // 演算法會嘗試多次，從隨機結果中找出最佳解
     for (let attempt = 0; attempt < 20; attempt++) {
-        const currentSchedule = JSON.parse(JSON.stringify(schedule));
+        // ✅ 核心修改：演算法的每一次嘗試，都從使用者預排的班表開始
+        const currentSchedule = JSON.parse(JSON.stringify(userPrefilledSchedule));
         const shuffledNurses = [...nurses].sort(() => Math.random() - 0.5);
 
-        // 步驟 1: 清空現有班表 (但保留使用者預先設定的 'R' 和 '公' 假)
-        shuffledNurses.forEach(nurse => {
-            for (let day = 0; day < daysInMonth; day++) {
-                const preservedShift = currentSchedule[nurse][day];
-                // ✅ 核心修正：明確檢查 'R' 和 '公'，確保它們不會被清除
-                if (preservedShift !== 'R' && preservedShift !== '公') {
-                    currentSchedule[nurse][day] = '';
-                }
-            }
-        });
+        // 步驟 1: **不再清空班表**，直接在現有基礎上填補空缺
 
         // 步驟 2: **人力優先**，填滿每日各班別基礎人力
         for (let day = 0; day < daysInMonth; day++) {
@@ -69,7 +60,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                 const shiftCounts = getShiftCounts(currentSchedule, shuffledNurses);
                 const candidates = shuffledNurses
                     .filter(n => currentSchedule[n][day] === '' && availableShifts[shift]?.includes(n) && checkConsecutive(currentSchedule, n, day))
-                    .sort((a, b) => shiftCounts[a].work - shiftCounts[b].work); // 優先選擇上班最少的人
+                    .sort((a, b) => shiftCounts[a].work - shiftCounts[b].work);
 
                 for(const candidate of candidates) {
                     if (assignedCount >= required) break;
@@ -111,7 +102,7 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
             }
         });
         
-        // 步驟 6: **夜班人力互相支援
+        // 步驟 6: **夜班人力互相支援**
         if (mutualSupport) {
             for (let day = 0; day < daysInMonth; day++) {
                 let currentNCount = nurses.filter(n => currentSchedule[n][day] === 'N').length;
@@ -121,8 +112,10 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                     
                     const candidates = shuffledNurses
                         .filter(nurse => 
-                            availableShifts['E']?.includes(nurse) &&
+                            // ✅ 核心修改：只動用演算法自己排的 OFF，不動使用者預排的
+                            userPrefilledSchedule[nurse][day] === '' &&
                             currentSchedule[nurse][day] === 'OFF' &&
+                            availableShifts['E']?.includes(nurse) &&
                             finalCounts[nurse].off > minOff &&
                             (day + 1 >= daysInMonth || currentSchedule[nurse][day + 1] !== 'E') &&
                             (day === 0 || currentSchedule[nurse][day - 1] !== 'E') &&
@@ -156,7 +149,11 @@ function autoGenerateSchedule(scheduleData, availableShifts, daysInMonth, params
                     const mostShift = currentSchedule[mostRestedNurse][day];
                     const leastShift = currentSchedule[leastRestedNurse][day];
                     
-                    if (mostShift === 'OFF' && ['D', 'E', 'N', 'Fn'].includes(leastShift)) {
+                    // ✅ 核心修改：確保交換的兩個儲存格都不是使用者預排的
+                    const mostWasPrefilled = userPrefilledSchedule[mostRestedNurse][day] !== '';
+                    const leastWasPrefilled = userPrefilledSchedule[leastRestedNurse][day] !== '';
+
+                    if (!mostWasPrefilled && !leastWasPrefilled && mostShift === 'OFF' && ['D', 'E', 'N', 'Fn'].includes(leastShift)) {
                         if (availableShifts[leastShift]?.includes(mostRestedNurse) && checkConsecutive(currentSchedule, mostRestedNurse, day)) {
                            currentSchedule[mostRestedNurse][day] = leastShift;
                            currentSchedule[leastRestedNurse][day] = 'OFF';

@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from 'react';
+// 引入 Firebase 相關服務
+import { auth, db } from './firebase';
+import { onAuthStateChanged, signOut, getRedirectResult } from "firebase/auth";
+import { doc, getDoc, setDoc, serverTimestamp } from "firebase/firestore";
+
+// 引入我們的所有頁面元件
 import InputPanel from './components/InputPanel';
 import ScheduleTable from './components/ScheduleTable';
+import SignIn from './components/SignIn';
 import autoGenerateSchedule from './utils/autoGenerateSchedule';
 import './styles.css';
 
@@ -24,8 +31,8 @@ const WelcomeModal = ({ onClose }) => (
     </div>
 );
 
-
-function App() {
+// 將您原本的排班 App 核心功能獨立成一個元件
+function NurseScheduleApp({ user }) {
   const [nurseNames, setNurseNames] = useState('');
   const [availableShifts, setAvailableShifts] = useState({ D: [], E: [], N: [], Fn: [] });
   const [schedule, setSchedule] = useState({ __meta: { year: new Date().getFullYear(), month: new Date().getMonth() } });
@@ -33,12 +40,13 @@ function App() {
   const [generated, setGenerated] = useState(false);
   const [showModal, setShowModal] = useState(true);
   const [mutualSupport, setMutualSupport] = useState(false);
+  const [userPrefills, setUserPrefills] = useState({});
 
   const [params, setParams] = useState({
     D: 6, E: 4, N: 4, Fn: 1,
     minOff: 8, maxConsecutive: 5,
   });
-  
+
   useEffect(() => {
     if (schedule.__meta) {
       const { year, month } = schedule.__meta;
@@ -54,10 +62,12 @@ function App() {
       initialSchedule[name] = Array(daysInMonth).fill('');
     });
     setSchedule(initialSchedule);
+    setUserPrefills({});
     setGenerated(true);
   };
 
   const handleGenerate = () => {
+    setUserPrefills(JSON.parse(JSON.stringify(schedule)));
     const newSchedule = autoGenerateSchedule(schedule, availableShifts, daysInMonth, params, mutualSupport);
     setSchedule(newSchedule);
   };
@@ -73,7 +83,7 @@ function App() {
     });
      setParams({ D: 6, E: 4, N: 4, Fn: 1, minOff: 8, maxConsecutive: 5 });
   };
-  
+
   const handleDateChange = (year, month) => {
       const newDays = new Date(year, month + 1, 0).getDate();
       setDaysInMonth(newDays);
@@ -103,7 +113,7 @@ function App() {
     XLSX.utils.book_append_sheet(wb, ws, '班表');
     XLSX.writeFile(wb, '護理班表.xlsx');
   };
-  
+
   // --- 輔助函式 ---
   const getShiftCounts = (sch, nurseList) => {
         const counts = {};
@@ -198,7 +208,7 @@ function App() {
             }
         }
     }
-    return null; // 找不到可交換的組合
+    return null;
   };
   
   const handleSingleOptimization = () => {
@@ -223,7 +233,7 @@ function App() {
     const eShiftSurplus = eNurses.reduce((sum, nurse) => sum + Math.max(0, (initialCounts[nurse]?.off || 0) - params.minOff), 0);
     const nShiftDeficit = nNurses.reduce((sum, nurse) => sum + Math.max(0, params.minOff - (initialCounts[nurse]?.off || 0)), 0);
 
-    const loopsToRun = Math.min(eShiftSurplus, nShiftDeficit);
+    const loopsToRun = Math.floor(Math.min(eShiftSurplus, nShiftDeficit));
     
     if (loopsToRun <= 0) {
         alert("目前小夜與大夜班的休假天數已達平衡或無多餘休假可調動。");
@@ -244,11 +254,21 @@ function App() {
     alert(`一鍵優化完成！總共執行了 ${successfulSwaps} 次班別交換。`);
   };
 
+  const handleLogout = () => {
+    signOut(auth);
+  };
+
   return (
-    <div className="App">
-      {showModal && <WelcomeModal onClose={() => setShowModal(false)} />}
+    <div>
+       {showModal && <WelcomeModal onClose={() => setShowModal(false)} />}
+       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', flexWrap: 'wrap' }}>
+         <h1>AI 護理排班系統</h1>
+         <div>
+            <span>歡迎, {user.displayName || user.email}</span>
+            <button onClick={handleLogout} style={{ marginLeft: '10px' }}>登出</button>
+         </div>
+       </div>
       
-      <h1>AI 護理排班系統</h1>
       <div className="controls">
           <button onClick={handleDemo} className="demo-button">DEMO</button>
       </div>
@@ -291,6 +311,7 @@ function App() {
       {generated && (
         <div className="actions-panel">
           <button onClick={handleGenerate}>產生班表</button>
+          {/* ✅ 核心修正：將完整的按鈕組加回來 */}
           <button onClick={handleSingleOptimization} className="optimize-button">夜班人力支援優化 (單次)</button>
           <button onClick={handleAutoOptimization} className="auto-optimize-button">一鍵優化夜班</button>
           <button onClick={handleExportToExcel}>匯出至Excel</button>
@@ -302,8 +323,102 @@ function App() {
             schedule={schedule} setSchedule={setSchedule}
             daysInMonth={daysInMonth} availableShifts={availableShifts}
             params={params}
+            userPrefills={userPrefills}
         />
       }
+    </div>
+  );
+}
+
+// 登入頁面
+function AuthPage() {
+    return (
+        <div>
+            <h1 style={{marginBottom: '40px'}}>AI 護理排班系統</h1>
+            <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <div style={{ width: '400px', padding: '30px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
+                    <SignIn />
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// 試用期結束時顯示的頁面
+const TrialExpiredPage = ({ user }) => (
+    <div style={{ textAlign: 'center', marginTop: '50px', padding: '20px' }}>
+        <h1>試用期已結束</h1>
+        <p>感謝您的試用！ {user.email}</p>
+        <p>如需繼續使用，請聯繫管理員(jay198377@gmail.com)以開通您的帳號, 信件主旨 "AI護理排班系統續用申請"。</p>
+        <button onClick={() => signOut(auth)} style={{ marginTop: '20px' }}>登出</button>
+    </div>
+);
+
+
+// 最外層的主 App 元件
+function App() {
+  const [user, setUser] = useState(null);
+  const [userProfile, setUserProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    getRedirectResult(auth).catch((error) => console.error("Redirect Result 處理失敗", error));
+    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) { 
+        const userRef = doc(db, "users", currentUser.uid);
+        const docSnap = await getDoc(userRef);
+        if (docSnap.exists()) {
+          setUserProfile(docSnap.data());
+        } else {
+          alert(`Hi, ${currentUser.displayName || currentUser.email}！歡迎加入！您已獲得一個月的完整功能試用期。`);
+          const newProfile = {
+            email: currentUser.email,
+            role: 'user',
+            trialStartedAt: serverTimestamp(),
+          };
+          await setDoc(userRef, newProfile);
+          const newDocSnap = await getDoc(userRef);
+          setUserProfile(newDocSnap.data());
+        }
+      } else {
+        setUserProfile(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>載入中...</div>;
+  }
+
+  const renderContent = () => {
+      if (user && userProfile) {
+          if (userProfile.role === 'admin') {
+              return <NurseScheduleApp user={user} />;
+          }
+          if (userProfile.trialStartedAt?.toDate) { 
+              const trialStartDate = userProfile.trialStartedAt.toDate();
+              const trialEndDate = new Date(trialStartDate.getTime() + 30 * 24 * 60 * 60 * 1000); 
+              if (new Date() < trialEndDate) {
+                  return <NurseScheduleApp user={user} />;
+              } else {
+                  return <TrialExpiredPage user={user} />;
+              }
+          }
+          return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>正在驗證使用者權限...</div>;
+      } else if(user && !userProfile) {
+          return <div style={{textAlign: 'center', marginTop: '50px', fontSize: '1.2em'}}>正在讀取使用者資料...</div>;
+      }
+      else {
+          return <AuthPage />;
+      }
+  };
+
+  return (
+    <div className="App">
+      {renderContent()}
     </div>
   );
 }

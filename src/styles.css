@@ -61,33 +61,32 @@ button, .demo-button, .optimize-button, .auto-optimize-button {
   cursor: pointer;
   transition: all 0.25s;
   margin: 5px;
-  color: white; /* 預設文字為白色 */
 }
 button:hover, .demo-button:hover, .optimize-button:hover, .auto-optimize-button:hover {
   filter: brightness(0.9);
 }
 
-/* 一般按鈕 (藍色) */
 button {
   background-color: #007bff;
+  color: white;
   border-color: #007bff;
 }
 
-/* DEMO 按鈕 (綠色) */
 .demo-button {
   background-color: #28a745;
+  color: white;
   border-color: #28a745;
 }
 
-/* 單次優化按鈕 (紫色) */
 .optimize-button {
     background-color: #6f42c1;
+    color: white;
     border-color: #6f42c1;
 }
 
-/* 一鍵優化按鈕 (紅色) */
 .auto-optimize-button {
     background-color: #dc3545;
+    color: white;
     border-color: #dc3545;
 }
 
@@ -112,15 +111,17 @@ button {
   white-space: nowrap;
 }
 
-/* 特別設定姓名和休假欄位的寬度 */
-.schedule-table .nurse-name-header {
+.schedule-table .nurse-name-header,
+.schedule-table .nurse-name-cell {
   width: 90px;
+  min-width: 90px;
 }
-.schedule-table .off-day-header {
+.schedule-table .off-day-header,
+.schedule-table .off-day-cell {
   width: 50px;
+  min-width: 50px;
 }
 
-/* 下拉選單樣式 */
 .schedule-table select {
   width: 100%;
   border: none;
@@ -168,6 +169,13 @@ button {
 .invalid-sequence-cell select {
     background-color: #FFCC80 !important; /* 醒目的橘色 */
 }
+
+/* ✅ 新增：使用者預填儲存格的樣式 */
+.prefilled-cell,
+.prefilled-cell select {
+    background-color: #E3F2FD !important; /* 淡藍色 */
+}
+
 
 /* Modal (彈出視窗) 樣式 */
 .modal-overlay {

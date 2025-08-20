@@ -1,19 +1,14 @@
 import React from 'react';
 
-// 將 Fn 加入下拉選單選項
 const SHIFT_OPTIONS = ['', 'D', 'E', 'N', 'Fn', 'OFF', '公', 'R'];
 
-// 輔助函式：找出連續上班超時的區間
 const getOverlappingRanges = (shifts, maxConsecutive) => {
     const ranges = [];
     let currentRangeStart = -1;
     let consecutiveCount = 0;
-
-    shifts.forEach((shift, index) => {
+    (shifts || []).forEach((shift, index) => {
         if (['D', 'E', 'N', 'Fn'].includes(shift)) {
-            if (currentRangeStart === -1) {
-                currentRangeStart = index;
-            }
+            if (currentRangeStart === -1) currentRangeStart = index;
             consecutiveCount++;
         } else {
             if (consecutiveCount > maxConsecutive) {
@@ -23,15 +18,14 @@ const getOverlappingRanges = (shifts, maxConsecutive) => {
             consecutiveCount = 0;
         }
     });
-
     if (consecutiveCount > maxConsecutive) {
-        ranges.push({ start: currentRangeStart, end: shifts.length - 1 });
+        ranges.push({ start: currentRangeStart, end: (shifts || []).length - 1 });
     }
     return ranges;
 };
 
 
-function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, params }) {
+function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, params, userPrefills }) {
 
   const handleChange = (nurse, day, value) => {
     const updatedSchedule = { ...schedule, [nurse]: [...schedule[nurse]] };
@@ -39,21 +33,19 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
     setSchedule(updatedSchedule);
   };
   
-  // 根據資格區分護理師群組
   const nurseList = Object.keys(schedule).filter(key => key !== '__meta');
   const fnNurses = nurseList.filter(nurse => availableShifts['Fn']?.includes(nurse));
   const dNurses = nurseList.filter(nurse => availableShifts['D']?.includes(nurse) && !fnNurses.includes(nurse));
   const eNurses = nurseList.filter(nurse => availableShifts['E']?.includes(nurse));
   const nNurses = nurseList.filter(nurse => availableShifts['N']?.includes(nurse));
 
-  // 渲染一群護理師的班表行
   const renderNurseRows = (nursesToRender) => {
     if (!nursesToRender || nursesToRender.length === 0) return null;
     
     return nursesToRender.map(nurse => {
       if (!schedule[nurse]) return null;
 
-      const offDays = schedule[nurse].filter(s => s === 'OFF' || s === 'R').length;
+      const offDays = schedule[nurse].filter(s => s === 'OFF' || s === 'R' || s === '公').length;
       const isOffDayShortage = offDays < params.minOff;
       const consecutiveRanges = getOverlappingRanges(schedule[nurse], params.maxConsecutive);
       
@@ -62,17 +54,17 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
           <td className="nurse-name-cell">{nurse}</td>
           {schedule[nurse].map((s, i) => {
             const isOver = consecutiveRanges.some(range => i >= range.start && i <= range.end);
-            
-            // ✅ 新增：檢查不合理的班別銜接
-            const prevShift = i > 0 ? schedule[nurse][i - 1] : null;
             const isInvalidSequence = 
-                (prevShift === 'N' && (s === 'D' || s === 'E')) ||
-                (prevShift === 'E' && s === 'D');
+                (i > 0 && schedule[nurse][i-1] === 'N' && (s === 'D' || s === 'E')) ||
+                (i > 0 && schedule[nurse][i-1] === 'E' && s === 'D');
+            
+            // ✅ 新增：檢查這個格子是否為使用者預填
+            const isPrefilled = userPrefills[nurse]?.[i] && userPrefills[nurse]?.[i] !== '';
 
-            // 組合 CSS class
             let cellClassName = '';
             if (isOver) cellClassName += ' over-consecutive-cell';
             if (isInvalidSequence) cellClassName += ' invalid-sequence-cell';
+            if (isPrefilled) cellClassName += ' prefilled-cell'; // ✅ 套用預填樣式
 
             return (
               <td key={i} className={cellClassName.trim()}>
@@ -90,7 +82,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
     });
   };
 
-  // 渲染一個班別的每日總計行
   const renderTotalRow = (shift) => {
     const dailyTotals = Array.from({ length: daysInMonth }, (_, day) => {
       return nurseList.reduce((count, nurse) => {
@@ -115,8 +106,9 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
             cellClass = 'surplus-cell';
           }
 
+          // Fn班週末不檢查人力問題
           if (shift === 'Fn' && isWeekend) {
-            cellClass = ''; 
+            cellClass = '';
           }
           
           return (
@@ -142,7 +134,6 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
         </tr>
     </thead>
     
-    {/* 日班與 Fn 班區塊 */}
     <tbody>
         {renderNurseRows(dNurses)}
         {renderNurseRows(fnNurses)}
@@ -150,23 +141,19 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
         {renderTotalRow('Fn')}
     </tbody>
 
-    {/* 分隔線 */}
     <tbody>
         <tr className="spacer-row"><td colSpan={daysInMonth + 3}></td></tr>
     </tbody>
 
-    {/* 小夜班區塊 */}
     <tbody>
         {renderNurseRows(eNurses)}
         {renderTotalRow('E')}
     </tbody>
     
-    {/* 分隔線 */}
     <tbody>
         <tr className="spacer-row"><td colSpan={daysInMonth + 3}></td></tr>
     </tbody>
 
-    {/* 大夜班區塊 */}
     <tbody>
         {renderNurseRows(nNurses)}
         {renderTotalRow('N')}
