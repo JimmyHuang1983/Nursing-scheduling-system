@@ -37,10 +37,9 @@ function NurseScheduleApp({ user }) {
     minOff: 8, maxConsecutive: 5,
   });
   
-  // --- 漢堡選單與其 Modal 的狀態 ---
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
-  const [modalContent, setModalContent] = useState(null); // 'guide', 'history', 'about'
+  const [modalContent, setModalContent] = useState(null);
 
   useEffect(() => {
     if (schedule.__meta) {
@@ -73,18 +72,6 @@ function NurseScheduleApp({ user }) {
     setUserPrefills(JSON.parse(JSON.stringify(schedule)));
     const newSchedule = autoGenerateSchedule(schedule, availableShifts, daysInMonth, params, mutualSupport);
     setSchedule(newSchedule);
-  };
-  
-  const handleDemo = () => {
-    const demoNames = "艾美麗,陳心怡,林佳蓉,黃詩涵,吳靜宜,許雅婷,王文君,蔡佩玲,曾惠敏,李宗翰,張建宏,劉俊傑,高明志,方文山,周杰倫,王力宏,林俊傑,陳奕迅,張學友,劉德華,郭富城,黎明";
-    setNurseNames(demoNames);
-    setAvailableShifts({
-        D: ["艾美麗", "陳心怡", "林佳蓉", "黃詩涵", "吳靜宜", "許雅婷", "王文君", "蔡佩玲", "曾惠敏"],
-        Fn: ["李宗翰", "張建宏"],
-        E: ["劉俊傑", "高明志", "方文山", "周杰倫", "王力宏", "林俊傑"],
-        N: ["陳奕迅", "張學友", "劉德華", "郭富城", "黎明"]
-    });
-     setParams({ D: 6, E: 4, N: 4, Fn: 1, minOff: 8, maxConsecutive: 5 });
   };
 
   const handleDateChange = (year, month) => {
@@ -258,7 +245,7 @@ function NurseScheduleApp({ user }) {
   const handleLogout = () => {
     signOut(auth);
   };
-
+  
   const renderModalContent = () => {
     switch(modalContent) {
         case 'guide':
@@ -276,7 +263,7 @@ function NurseScheduleApp({ user }) {
         case 'history':
             return <Modal title="版本歷史紀錄" onClose={() => setModalContent(null)}>
                 <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '14px' }}>
-{`AI 護理排班系統 - 版本歷史紀錄
+                    {`AI 護理排班系統 - 版本歷史紀錄
 
 ### v7.1 (當前版本)
 - 新增漢堡設定選單 (深色模式, 使用說明, 版本歷史, 問題回報, 關於)
@@ -371,7 +358,7 @@ function NurseScheduleApp({ user }) {
        </div>
       
       <div className="main-content">
-          <div className="inputs">
+           <div className="inputs">
             <label>
               月份選擇:
               <input type="month" defaultValue={`${schedule.__meta.year}-${String(schedule.__meta.month + 1).padStart(2, '0')}`}
@@ -400,16 +387,13 @@ function NurseScheduleApp({ user }) {
               夜班人力互相支援
             </label>
           </div>
-
-          <div className="input-container-with-demo">
-            <InputPanel
-              nurseNames={nurseNames} setNurseNames={setNurseNames}
-              availableShifts={availableShifts} setAvailableShifts={setAvailableShifts}
-              onConfirm={handleConfirm}
-            />
-            <button onClick={handleDemo} className="demo-button">DEMO</button>
-          </div>
-
+          
+          <InputPanel
+            nurseNames={nurseNames} setNurseNames={setNurseNames}
+            availableShifts={availableShifts} setAvailableShifts={setAvailableShifts}
+            onConfirm={handleConfirm}
+            setParams={setParams}
+          />
 
           {generated && (
             <div className="actions-panel">
