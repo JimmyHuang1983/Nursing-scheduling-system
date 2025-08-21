@@ -11,22 +11,13 @@ import SignIn from './components/SignIn';
 import autoGenerateSchedule from './utils/autoGenerateSchedule';
 import './styles.css';
 
-// Welcome Modal Component
-const WelcomeModal = ({ onClose }) => (
+// --- 通用 Modal 元件 ---
+const Modal = ({ title, children, onClose }) => (
     <div className="modal-overlay">
         <div className="modal-content">
             <button onClick={onClose} className="modal-close-button">&times;</button>
-            <h2>歡迎使用 AI 護理排班系統</h2>
-            <p>本系統旨在協助護理長快速、公平且有效率地完成複雜的排班工作。請依照以下步驟操作：</p>
-            <ul>
-                <li><strong>步驟一：設定條件</strong> - 在畫面頂端輸入每日各班別的人力需求、每人應休天數上限與最多連續上班天數。</li>
-                <li><strong>步驟二：輸入人員名單</strong> - 在「輸入人員名單」區塊，填入所有參與排班的護理師姓名，請用英文逗號 <code>,</code> 隔開。</li>
-                <li><strong>步驟三：勾選班別資格</strong> - 系統會自動產生勾選清單，請為每位護理師勾選他/她具備的班別資格。</li>
-                <li><strong>步驟四：確認與預班</strong> - 按下「確認人員與班別」按鈕，系統會產生一個空白的班表。您可以在此手動為特定人員預排休假（R）或「公」假。</li>
-                <li><strong>步驟五：AI 產生班表</strong> - 按下「產生班表」按鈕，AI 將根據您設定的所有條件，自動計算並產生一份公平的班表。</li>
-                <li><strong>步驟六：夜班人力優化</strong> - (可選) 在產生班表後，可多次點擊「夜班人力支援優化」（單次）或「一鍵優化夜班」（多次）按鈕，以平衡小夜與大夜班的休假天數。</li>
-                <li><strong>步驟七：匯出Excel</strong> - 對班表滿意後，可點擊「匯出至Excel」將結果下載保存。</li>
-            </ul>
+            <h2>{title}</h2>
+            {children}
         </div>
     </div>
 );
@@ -38,7 +29,6 @@ function NurseScheduleApp({ user }) {
   const [schedule, setSchedule] = useState({ __meta: { year: new Date().getFullYear(), month: new Date().getMonth() } });
   const [daysInMonth, setDaysInMonth] = useState(31);
   const [generated, setGenerated] = useState(false);
-  const [showModal, setShowModal] = useState(true);
   const [mutualSupport, setMutualSupport] = useState(false);
   const [userPrefills, setUserPrefills] = useState({});
 
@@ -46,6 +36,11 @@ function NurseScheduleApp({ user }) {
     D: 6, E: 4, N: 4, Fn: 1,
     minOff: 8, maxConsecutive: 5,
   });
+  
+  // --- 漢堡選單與其 Modal 的狀態 ---
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [modalContent, setModalContent] = useState(null); // 'guide', 'history', 'about'
 
   useEffect(() => {
     if (schedule.__meta) {
@@ -54,6 +49,14 @@ function NurseScheduleApp({ user }) {
       setDaysInMonth(newDays);
     }
   }, [schedule]);
+  
+  useEffect(() => {
+    if (isDarkMode) {
+      document.body.classList.add('dark-mode');
+    } else {
+      document.body.classList.remove('dark-mode');
+    }
+  }, [isDarkMode]);
 
   const handleConfirm = () => {
     const names = (nurseNames || '').split(',').map(name => name.trim()).filter(Boolean);
@@ -71,7 +74,7 @@ function NurseScheduleApp({ user }) {
     const newSchedule = autoGenerateSchedule(schedule, availableShifts, daysInMonth, params, mutualSupport);
     setSchedule(newSchedule);
   };
-
+  
   const handleDemo = () => {
     const demoNames = "艾美麗,陳心怡,林佳蓉,黃詩涵,吳靜宜,許雅婷,王文君,蔡佩玲,曾惠敏,李宗翰,張建宏,劉俊傑,高明志,方文山,周杰倫,王力宏,林俊傑,陳奕迅,張學友,劉德華,郭富城,黎明";
     setNurseNames(demoNames);
@@ -89,7 +92,7 @@ function NurseScheduleApp({ user }) {
       setDaysInMonth(newDays);
       setSchedule(prev => ({ ...prev, __meta: { year, month } }));
   };
-
+  
   const handleExportToExcel = () => {
     if (typeof XLSX === 'undefined') {
       alert('Excel 匯出函式庫載入中，請稍後再試。');
@@ -113,8 +116,7 @@ function NurseScheduleApp({ user }) {
     XLSX.utils.book_append_sheet(wb, ws, '班表');
     XLSX.writeFile(wb, '護理班表.xlsx');
   };
-
-  // --- 輔助函式 ---
+  
   const getShiftCounts = (sch, nurseList) => {
         const counts = {};
         nurseList.forEach(nurse => {
@@ -134,13 +136,13 @@ function NurseScheduleApp({ user }) {
         if (['OFF', 'R', '公', ''].includes(newShift)) return true;
         if (day > 0) {
             const prevShift = schedule[nurse][day - 1];
-            if (prevShift === 'N' && (newShift === 'D' || newShift === 'E')) return false;
+            if (prevShift === 'N' && (newShift === 'D' || newShift === 'E' || newShift === 'Fn')) return false;
             if (prevShift === 'E' && newShift === 'D') return false;
+            if (prevShift === 'Fn' && newShift === 'D') return false;
         }
         if (day < daysInMonth - 1) {
             const nextShift = schedule[nurse][day + 1];
-            if (newShift === 'N' && (nextShift === 'D' || nextShift === 'E')) return false;
-            if (newShift === 'E' && nextShift === 'D') return false;
+            if (newShift === 'N' && (nextShift === 'D' || nextShift === 'E' || nextShift === 'Fn')) return false;
         }
         return true;
    };
@@ -162,7 +164,6 @@ function NurseScheduleApp({ user }) {
         return max <= params.maxConsecutive;
     };
 
-  // 執行一次優化交換的核心邏輯
   const runOptimizationSwap = (currentSchedule) => {
     const nurseList = Object.keys(currentSchedule).filter(k => k !== '__meta');
     const eNurses = nurseList.filter(nurse => availableShifts['E']?.includes(nurse));
@@ -258,76 +259,176 @@ function NurseScheduleApp({ user }) {
     signOut(auth);
   };
 
+  const renderModalContent = () => {
+    switch(modalContent) {
+        case 'guide':
+            return <Modal title="使用說明" onClose={() => setModalContent(null)}>
+                <ul>
+                    <li><strong>步驟一：設定條件</strong> - 在畫面頂端輸入每日各班別的人力需求、每人應休天數上限與最多連續上班天數。</li>
+                    <li><strong>步驟二：輸入人員名單</strong> - 在「輸入人員名單」區塊，填入所有參與排班的護理師姓名，請用英文逗號 <code>,</code> 隔開。</li>
+                    <li><strong>步驟三：勾選班別資格</strong> - 系統會自動產生勾選清單，請為每位護理師勾選他/她具備的班別資格。</li>
+                    <li><strong>步驟四：確認與預班</strong> - 按下「確認人員與班別」按鈕，系統會產生一個空白的班表。您可以在此手動為特定人員預排休假（R）或「公」假。</li>
+                    <li><strong>步驟五：AI 產生班表</strong> - 按下「產生班表」按鈕，AI 將根據您設定的所有條件，自動計算並產生一份公平的班表。</li>
+                    <li><strong>步驟六：夜班人力優化</strong> - (可選) 在產生班表後，可多次點擊「夜班人力支援優化」（單次）或「一鍵優化夜班」（多次）按鈕，以平衡小夜與大夜班的休假天數。</li>
+                    <li><strong>步驟七：匯出Excel</strong> - 對班表滿意後，可點擊「匯出至Excel」將結果下載保存。</li>
+                </ul>
+            </Modal>;
+        case 'history':
+            return <Modal title="版本歷史紀錄" onClose={() => setModalContent(null)}>
+                <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '14px' }}>
+{`AI 護理排班系統 - 版本歷史紀錄
+
+### v7.1 (當前版本)
+- 新增漢堡設定選單 (深色模式, 使用說明, 版本歷史, 問題回報, 關於)
+- 新增「Fn 班後不能接 D 班」的排班規則與視覺提示
+- 在班表表頭新增「星期幾」資訊列
+- 修正 Fn 班總計在週末的 Highlight 邏輯
+- 調整班別下拉選單順序
+
+### v7.0 
+- 新增「一鍵優化夜班」功能，自動多次執行交換邏輯以平衡休假
+- 新增使用者預填班別 Highlight 功能，方便手動微調
+- 新增「人力過剩」的黃底 Highlight 警示
+
+### v6.0
+- 成功整合 Firebase Firestore 資料庫
+- 實現使用者「一個月試用期」與管理員「永久使用權」
+- 解決因非同步讀取資料庫導致的登入迴圈問題，確保登入流程穩定
+
+### v5.0
+- 建立 feature/authentication 開發分支，將主線 (main) 與新功能（帳號系統）的開發完全隔離
+- 成功整合 Firebase Authentication，實現安全的 Google 帳號登入/登出
+- 引入環境變數 (.env.local) 與 GitHub Secrets，安全管理 API 金鑰
+
+### v4.0
+- 建立穩定、可用的核心排班功能，被定義為第一個成功的版本。
+- 新增「夜班人力支援優化」按鈕，提供使用者在 AI 產生班表後，手動、單次地進行人力平衡微調的彈性。
+- 新增使用者教學，在首次進入頁面時彈出引導視窗。
+- 修復並保留「公」假，確保使用者預排的公假不會被 AI 演算法覆蓋。
+
+### v3.0
+- 大幅優化排班演算法，引入綜合評分機制，解決先前版本休假天數嚴重不公（有人休26天，有人只休5天）的問題。
+- 新增「人力過剩」的黃底 Highlight 警示，讓班表狀態更一目了然。
+
+### v2.0
+- 重構表格顯示邏輯，解決 UI 元件重複渲染導致畫面內容出現兩次的問題。
+- 實現「人力不足」、「休假不足」與「連續上班超時」的紅底 Highlight 警示功能。
+- 新增「匯出至 Excel」功能。
+- 新增 DEMO 按鈕，方便快速展示系統功能。
+
+### v1.0
+- 專案初始化，使用 React + Vite 建立基本 UI 介面。
+- 解決部署後空白頁面、路徑錯誤、CSS 樣式錯誤等多項基礎建設問題。
+- 完成 GitHub Actions 自動化部署流程，成功發布第一個可在線上操作的版本。`}
+                </pre>
+            </Modal>;
+        case 'about':
+            return <Modal title="關於本系統" onClose={() => setModalContent(null)}>
+                <p>AI 護理排班系統 v7.1</p>
+                <p>開發者： JimmyHuang1983</p>
+            </Modal>;
+        default:
+            return null;
+    }
+  };
+
   return (
     <div>
-       {showModal && <WelcomeModal onClose={() => setShowModal(false)} />}
-       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', flexWrap: 'wrap' }}>
-         <h1>AI 護理排班系統
-         	<span style={{ fontSize: '0.5em', color: '#666', marginLeft: '10px' }}>v7.1</span>
+       {renderModalContent()}
+       <div className="header-bar">
+         <div className="hamburger-container" onMouseEnter={() => setIsMenuOpen(true)} onMouseLeave={() => setIsMenuOpen(false)}>
+            <button className="hamburger-menu">
+                &#9776;
+            </button>
+            {isMenuOpen && (
+              <div className="side-menu">
+                  <ul>
+                      <li>
+                          <div className="menu-item">
+                              <span>深色模式</span>
+                              <label className="toggle-switch">
+                                  <input type="checkbox" checked={isDarkMode} onChange={() => setIsDarkMode(!isDarkMode)} />
+                                  <span className="slider"></span>
+                              </label>
+                          </div>
+                      </li>
+                      <li><button className="menu-item-button" onClick={() => {setModalContent('guide'); setIsMenuOpen(false);}}>使用說明</button></li>
+                      <li><button className="menu-item-button" onClick={() => {setModalContent('history'); setIsMenuOpen(false);}}>版本歷史</button></li>
+                      <li><a href="mailto:jay198377@gmail.com?subject=AI護理排班系統 問題回報/功能建議" target="_blank" rel="noopener noreferrer" className="menu-item-link">問題回報 / 功能建議</a></li>
+                      <li><button className="menu-item-button" onClick={() => {setModalContent('about'); setIsMenuOpen(false);}}>關於</button></li>
+                  </ul>
+              </div>
+            )}
+         </div>
+         <h1>
+            AI 護理排班系統 
+            <span className="version-tag">v7.1</span>
          </h1>
-         <div>
+         <div className="user-info">
             <span>歡迎, {user.displayName || user.email}</span>
-            <button onClick={handleLogout} style={{ marginLeft: '10px' }}>登出</button>
+            <button onClick={handleLogout}>登出</button>
          </div>
        </div>
       
-      <div className="controls">
-          <button onClick={handleDemo} className="demo-button">DEMO</button>
-      </div>
-      <div className="inputs">
-        <label>
-          月份選擇:
-          <input type="month" defaultValue={`${schedule.__meta.year}-${String(schedule.__meta.month + 1).padStart(2, '0')}`}
-           onChange={e => handleDateChange(parseInt(e.target.value.split('-')[0]), parseInt(e.target.value.split('-')[1]) - 1)}
-          />
-        </label>
-        <br/>
-        <label>
-          各班每日人數需求：
-          D:<input type="number" value={params.D} onChange={e => setParams({ ...params, D: parseInt(e.target.value) || 0 })}/>
-          E:<input type="number" value={params.E} onChange={e => setParams({ ...params, E: parseInt(e.target.value) || 0 })}/>
-          N:<input type="number" value={params.N} onChange={e => setParams({ ...params, N: parseInt(e.target.value) || 0 })}/>
-          Fn:<input type="number" value={params.Fn} onChange={e => setParams({ ...params, Fn: parseInt(e.target.value) || 0 })}/>
-        </label>
-        <br />
-        <label>
-          每人本月應休天數：
-          <input type="number" value={params.minOff} onChange={e => setParams({ ...params, minOff: parseInt(e.target.value) || 0 })}/>
-        </label>
-        <label>
-          最多連上天數：
-          <input type="number" value={params.maxConsecutive} onChange={e => setParams({ ...params, maxConsecutive: parseInt(e.target.value) || 0 })} />
-        </label>
-        <label>
-          <input type="checkbox" checked={mutualSupport} onChange={e => setMutualSupport(e.target.checked)} />
-          夜班人力互相支援
-        </label>
-      </div>
+      <div className="main-content">
+          <div className="inputs">
+            <label>
+              月份選擇:
+              <input type="month" defaultValue={`${schedule.__meta.year}-${String(schedule.__meta.month + 1).padStart(2, '0')}`}
+              onChange={e => handleDateChange(parseInt(e.target.value.split('-')[0]), parseInt(e.target.value.split('-')[1]) - 1)}
+              />
+            </label>
+            <br/>
+            <label>
+              各班每日人數需求：
+              D:<input type="number" value={params.D} onChange={e => setParams({ ...params, D: parseInt(e.target.value) || 0 })}/>
+              E:<input type="number" value={params.E} onChange={e => setParams({ ...params, E: parseInt(e.target.value) || 0 })}/>
+              N:<input type="number" value={params.N} onChange={e => setParams({ ...params, N: parseInt(e.target.value) || 0 })}/>
+              Fn:<input type="number" value={params.Fn} onChange={e => setParams({ ...params, Fn: parseInt(e.target.value) || 0 })}/>
+            </label>
+            <br />
+            <label>
+              每人本月應休天數：
+              <input type="number" value={params.minOff} onChange={e => setParams({ ...params, minOff: parseInt(e.target.value) || 0 })}/>
+            </label>
+            <label>
+              最多連上天數：
+              <input type="number" value={params.maxConsecutive} onChange={e => setParams({ ...params, maxConsecutive: parseInt(e.target.value) || 0 })} />
+            </label>
+            <label>
+              <input type="checkbox" checked={mutualSupport} onChange={e => setMutualSupport(e.target.checked)} />
+              夜班人力互相支援
+            </label>
+          </div>
 
-      <InputPanel
-        nurseNames={nurseNames} setNurseNames={setNurseNames}
-        availableShifts={availableShifts} setAvailableShifts={setAvailableShifts}
-        onConfirm={handleConfirm}
-      />
+          <div className="input-container-with-demo">
+            <InputPanel
+              nurseNames={nurseNames} setNurseNames={setNurseNames}
+              availableShifts={availableShifts} setAvailableShifts={setAvailableShifts}
+              onConfirm={handleConfirm}
+            />
+            <button onClick={handleDemo} className="demo-button">DEMO</button>
+          </div>
 
-      {generated && (
-        <div className="actions-panel">
-          <button onClick={handleGenerate}>產生班表</button>
-          {/* ✅ 核心修正：將完整的按鈕組加回來 */}
-          <button onClick={handleSingleOptimization} className="optimize-button">夜班人力支援優化 (單次)</button>
-          <button onClick={handleAutoOptimization} className="auto-optimize-button">一鍵優化夜班</button>
-          <button onClick={handleExportToExcel}>匯出至Excel</button>
-        </div>
-      )}
-      
-      {generated && 
-        <ScheduleTable
-            schedule={schedule} setSchedule={setSchedule}
-            daysInMonth={daysInMonth} availableShifts={availableShifts}
-            params={params}
-            userPrefills={userPrefills}
-        />
-      }
+
+          {generated && (
+            <div className="actions-panel">
+              <button onClick={handleGenerate}>產生班表</button>
+              <button onClick={handleSingleOptimization} className="optimize-button">夜班人力支援優化 (單次)</button>
+              <button onClick={handleAutoOptimization} className="auto-optimize-button">一鍵優化夜班</button>
+              <button onClick={handleExportToExcel}>匯出至Excel</button>
+            </div>
+          )}
+          
+          {generated && 
+            <ScheduleTable
+                schedule={schedule} setSchedule={setSchedule}
+                daysInMonth={daysInMonth} availableShifts={availableShifts}
+                params={params}
+                userPrefills={userPrefills}
+            />
+          }
+      </div>
     </div>
   );
 }
@@ -336,7 +437,7 @@ function NurseScheduleApp({ user }) {
 function AuthPage() {
     return (
         <div>
-            <h1 style={{marginBottom: '40px'}}>AI 護理排班系統</h1>
+            <h1 style={{marginBottom: '40px', textAlign: 'center'}}>AI 護理排班系統</h1>
             <div style={{ display: 'flex', justifyContent: 'center' }}>
                 <div style={{ width: '400px', padding: '30px', border: '1px solid #ddd', borderRadius: '8px', backgroundColor: '#f9f9f9', boxShadow: '0 4px 8px rgba(0,0,0,0.1)' }}>
                     <SignIn />
@@ -352,7 +453,7 @@ const TrialExpiredPage = ({ user }) => (
         <h1>試用期已結束</h1>
         <p>感謝您的試用！ {user.email}</p>
         <p>如需繼續使用，請聯繫管理員(jay198377@gmail.com)以開通您的帳號, 信件主旨 "AI護理排班系統續用申請"。</p>
-        <button onClick={() => signOut(auth)} style={{ marginTop: '20px' }}>登出</button>
+        <button onClick={() => signOut(auth)}>登出</button>
     </div>
 );
 
@@ -424,6 +525,7 @@ function App() {
     </div>
   );
 }
+
 
 export default App;
 

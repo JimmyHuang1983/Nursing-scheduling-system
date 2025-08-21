@@ -6,30 +6,218 @@ body {
   color: #213547;
   background-color: #ffffff;
   margin: 0;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* --- 深色模式 --- */
+body.dark-mode {
+  background-color: #121212;
+  color: #e0e0e0;
+}
+body.dark-mode .App {
+  color: #e0e0e0;
+}
+body.dark-mode h1, body.dark-mode h2 {
+  color: #ffffff;
+}
+body.dark-mode .inputs, body.dark-mode .input-panel, body.dark-mode .modal-content {
+  background-color: #1e1e1e;
+  border-color: #444;
+}
+body.dark-mode .schedule-table th, body.dark-mode .schedule-table td {
+  background-color: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #444;
+}
+body.dark-mode .schedule-table select {
+    color: #e0e0e0;
+    background-color: #2a2a2a;
+}
+body.dark-mode .sum-row {
+  background-color: #333;
+}
+body.dark-mode .spacer-row td {
+  background-color: #1a1a1a;
+}
+body.dark-mode .prefilled-cell, body.dark-mode .prefilled-cell select {
+    background-color: #1E3A8A !important; /* 深藍色 */
 }
 
 /* App 主容器 */
 .App {
   font-family: sans-serif;
-  padding: 20px;
+  padding: 0;
   color: #333;
 }
 
-h1 {
-  font-size: 2.2em;
-  line-height: 1.1;
-  color: #333;
-  text-align: center;
+/* --- 頁首樣式 --- */
+.header-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 20px;
+  background-color: #f8f9fa;
+  border-bottom: 1px solid #ddd;
+  min-height: 40px;
+}
+body.dark-mode .header-bar {
+    background-color: #1e1e1e;
+    border-bottom: 1px solid #444;
+}
+.header-bar h1 {
+  font-size: 1.8em;
+  margin: 0;
+  display: flex;
+  align-items: baseline;
+  flex-grow: 1;
+  justify-content: center;
+}
+.version-tag {
+  font-size: 0.5em;
+  color: #666;
+  margin-left: 10px;
+}
+.user-info {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+.user-info span {
+  margin-right: 10px;
+}
+.user-info button {
+  background-color: #6c757d;
+  color: white;
+  border-color: #6c757d;
 }
 
-/* 控制項與輸入元件樣式 */
-.controls {
+.main-content {
+    padding: 20px;
+}
+
+/* --- 漢堡選單樣式 --- */
+.hamburger-container {
+    position: relative;
+}
+.hamburger-menu {
+    font-size: 24px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0 10px;
+    color: #333;
+}
+body.dark-mode .hamburger-menu {
+    color: #e0e0e0;
+}
+.side-menu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 250px;
+    background-color: #ffffff;
+    border: 1px solid #ddd;
+    border-top: none;
+    box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+    z-index: 1001;
+    padding: 10px 0;
+    border-radius: 0 0 8px 8px;
+}
+body.dark-mode .side-menu {
+    background-color: #1e1e1e;
+    border-color: #444;
+}
+.side-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.side-menu li {
+    padding: 0;
+}
+.menu-item, .menu-item-button, .menu-item-link {
+    padding: 12px 20px;
+}
+.menu-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    box-sizing: border-box;
+}
+.menu-item-button, .menu-item-link {
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font-size: 1em;
+    cursor: pointer;
+    color: inherit;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+.menu-item-link {
+    display: block;
+    text-decoration: none;
+    color: #212529;
+}
+body.dark-mode .menu-item-button, body.dark-mode .menu-item-link {
+    color: #e0e0e0;
+}
+.side-menu li:hover {
+    background-color: #f0f0f0;
+}
+body.dark-mode .side-menu li:hover {
+    background-color: #333;
+}
+
+
+/* --- Toggle Switch 樣式 --- */
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px;
+  height: 28px;
+}
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  transition: .4s;
+  border-radius: 28px;
+}
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 20px;
+  width: 20px;
+  left: 4px;
+  bottom: 4px;
+  background-color: white;
+  transition: .4s;
+  border-radius: 50%;
+}
+input:checked + .slider {
+  background-color: #2196F3;
+}
+input:checked + .slider:before {
+  transform: translateX(22px);
+}
+
+/* --- 其他元件樣式 --- */
+.controls, .actions-panel {
   text-align: center;
   margin-bottom: 15px;
 }
-
 .inputs, .input-panel {
   margin-bottom: 20px;
   padding: 15px;
@@ -37,12 +225,6 @@ h1 {
   border-radius: 8px;
   background-color: #f9f9f9;
 }
-
-.actions-panel {
-  text-align: center;
-  margin-top: 20px;
-}
-
 input, textarea, select {
   margin: 5px;
   padding: 8px;
@@ -90,14 +272,13 @@ button {
     border-color: #dc3545;
 }
 
-
 /* --- 表格樣式 --- */
 .schedule-table {
   border-collapse: collapse;
-  width: 100%; 
+  width: 100%;
   margin-top: 20px;
   font-size: 13px;
-  table-layout: fixed; 
+  table-layout: fixed;
 }
 
 .schedule-table th, .schedule-table td {
@@ -140,6 +321,10 @@ button {
   background-color: #e9ecef;
   font-weight: bold;
 }
+.weekday-row {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
 
 .spacer-row td {
   border: none;
@@ -149,33 +334,31 @@ button {
 
 /* 警示儲存格樣式 */
 .shortage-cell {
-  background-color: #ffcdd2 !important; 
-  color: #c62828 !important; 
+  background-color: #ffcdd2 !important;
+  color: #c62828 !important;
   font-weight: bold;
 }
 
 .surplus-cell {
-    background-color: #FFF9C4 !important; /* 淡黃色 */
-    color: #F57F17 !important; /* 深黃色文字 */
+    background-color: #FFF9C4 !important;
+    color: #F57F17 !important;
     font-weight: bold;
 }
 
 .over-consecutive-cell,
 .over-consecutive-cell select {
-  background-color: #ffcdd2 !important; 
+  background-color: #ffcdd2 !important;
 }
 
 .invalid-sequence-cell,
 .invalid-sequence-cell select {
-    background-color: #FFCC80 !important; /* 醒目的橘色 */
+    background-color: #FFCC80 !important;
 }
 
-/* ✅ 新增：使用者預填儲存格的樣式 */
 .prefilled-cell,
 .prefilled-cell select {
-    background-color: #E3F2FD !important; /* 淡藍色 */
+    background-color: #E3F2FD !important;
 }
-
 
 /* Modal (彈出視窗) 樣式 */
 .modal-overlay {
