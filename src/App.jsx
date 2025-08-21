@@ -262,7 +262,9 @@ function NurseScheduleApp({ user }) {
     <div>
        {showModal && <WelcomeModal onClose={() => setShowModal(false)} />}
        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 20px', flexWrap: 'wrap' }}>
-         <h1>AI 護理排班系統</h1>
+         <h1>AI 護理排班系統
+         	<span style={{ fontSize: '0.5em', color: '#666', marginLeft: '10px' }}>v7.1</span>
+         </h1>
          <div>
             <span>歡迎, {user.displayName || user.email}</span>
             <button onClick={handleLogout} style={{ marginLeft: '10px' }}>登出</button>

@@ -1,7 +1,9 @@
 import React from 'react';
 
-const SHIFT_OPTIONS = ['', 'D', 'E', 'N', 'Fn', 'OFF', '公', 'R'];
+// 修正點：調整下拉選單的順序
+const SHIFT_OPTIONS = ['', 'R', '公', 'D', 'E', 'N', 'Fn', 'OFF'];
 
+// 輔助函式：找出連續上班超時的區間
 const getOverlappingRanges = (shifts, maxConsecutive) => {
     const ranges = [];
     let currentRangeStart = -1;
@@ -54,17 +56,20 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
           <td className="nurse-name-cell">{nurse}</td>
           {schedule[nurse].map((s, i) => {
             const isOver = consecutiveRanges.some(range => i >= range.start && i <= range.end);
-            const isInvalidSequence = 
-                (i > 0 && schedule[nurse][i-1] === 'N' && (s === 'D' || s === 'E')) ||
-                (i > 0 && schedule[nurse][i-1] === 'E' && s === 'D');
             
-            // ✅ 新增：檢查這個格子是否為使用者預填
+            // 修正點：加入 Fn -> D 的檢查
+            const prevShift = i > 0 ? schedule[nurse][i - 1] : null;
+            const isInvalidSequence = 
+                (prevShift === 'N' && (s === 'D' || s === 'E' || s === 'Fn')) ||
+                (prevShift === 'E' && s === 'D') ||
+                (prevShift === 'Fn' && s === 'D');
+
             const isPrefilled = userPrefills[nurse]?.[i] && userPrefills[nurse]?.[i] !== '';
 
             let cellClassName = '';
             if (isOver) cellClassName += ' over-consecutive-cell';
             if (isInvalidSequence) cellClassName += ' invalid-sequence-cell';
-            if (isPrefilled) cellClassName += ' prefilled-cell'; // ✅ 套用預填樣式
+            if (isPrefilled) cellClassName += ' prefilled-cell';
 
             return (
               <td key={i} className={cellClassName.trim()}>
@@ -94,21 +99,12 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
         <td>{shift} 班總計</td>
         {dailyTotals.map((total, i) => {
           const required = params[shift] || 0;
-          const year = schedule.__meta?.year || new Date().getFullYear();
-          const month = schedule.__meta?.month !== undefined ? schedule.__meta.month : new Date().getMonth();
-          const date = new Date(year, month, i + 1);
-          const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-          
           let cellClass = '';
+          // 修正點：移除對 Fn 班週末的特殊判斷
           if (total < required) {
             cellClass = 'shortage-cell';
           } else if (total > required) {
             cellClass = 'surplus-cell';
-          }
-
-          // Fn班週末不檢查人力問題
-          if (shift === 'Fn' && isWeekend) {
-            cellClass = '';
           }
           
           return (
@@ -121,16 +117,34 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
       </tr>
     );
   };
+  
+  // 新增：用來顯示星期幾的 JSX
+  const weekDays = ['日', '一', '二', '三', '四', '五', '六'];
+  const weekDayRow = Array.from({ length: daysInMonth }, (_, i) => {
+      const year = schedule.__meta?.year || new Date().getFullYear();
+      const month = schedule.__meta?.month !== undefined ? schedule.__meta.month : new Date().getMonth();
+      const date = new Date(year, month, i + 1);
+      return weekDays[date.getDay()];
+  });
+
 
   return (
     <table className="schedule-table">
     <thead>
         <tr>
-        <th className="nurse-name-header">護理師</th>
-        {Array.from({ length: daysInMonth }, (_, i) => (
-            <th key={i + 1}>{i + 1}</th>
-        ))}
-        <th className="off-day-header">休假</th>
+            <th className="nurse-name-header">護理師</th>
+            {Array.from({ length: daysInMonth }, (_, i) => (
+                <th key={i + 1}>{i + 1}</th>
+            ))}
+            <th className="off-day-header">休假</th>
+        </tr>
+        {/* 新增：星期幾的顯示列 */}
+        <tr className="weekday-row">
+            <th>星期</th>
+            {weekDayRow.map((day, index) => (
+                <th key={index}>{day}</th>
+            ))}
+            <th></th>
         </tr>
     </thead>
     
@@ -142,7 +156,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
     </tbody>
 
     <tbody>
-        <tr className="spacer-row"><td colSpan={daysInMonth + 3}></td></tr>
+        <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
     </tbody>
 
     <tbody>
@@ -151,7 +165,7 @@ function ScheduleTable({ schedule, setSchedule, daysInMonth, availableShifts, pa
     </tbody>
     
     <tbody>
-        <tr className="spacer-row"><td colSpan={daysInMonth + 3}></td></tr>
+        <tr className="spacer-row"><td colSpan={daysInMonth + 2}></td></tr>
     </tbody>
 
     <tbody>
